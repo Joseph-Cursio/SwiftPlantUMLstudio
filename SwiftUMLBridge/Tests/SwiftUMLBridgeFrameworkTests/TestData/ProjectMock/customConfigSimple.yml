@@ -1,0 +1,31 @@
+files:
+  exclude:
+    - "Tests/**/Mock*.swift"
+elements:
+  havingAccessLevel:
+    - public
+  showMembersWithAccessLevel:
+    - public
+  showGenerics: false
+  showExtensions: merged
+  exclude:
+    - UIViewController
+hideShowCommands:
+  - hide empty members
+skinparamCommands:
+  - skinparam shadowing false
+relationships:
+  inheritance:
+    label: "inherits from"
+    exclude:
+      - "Codable"
+  realize:
+    label: "conforms to"
+  dependency:
+    label: extends
+texts:
+  header: headerText
+  title: titleText
+  legend: legendText
+  caption: captionText
+  footer: footerText

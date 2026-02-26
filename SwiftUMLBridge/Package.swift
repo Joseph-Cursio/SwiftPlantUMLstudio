@@ -33,7 +33,8 @@ let package = Package(
         .testTarget(
             name: "SwiftUMLBridgeFrameworkTests",
             dependencies: ["SwiftUMLBridgeFramework"],
-            resources: [.copy("TestData")]
+            resources: [.copy("TestData")],
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ]
 )
