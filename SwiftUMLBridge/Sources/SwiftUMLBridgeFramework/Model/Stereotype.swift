@@ -46,22 +46,22 @@ public struct Stereotype: Codable {
     }
 
     public private(set) static var `class` = Stereotype(
-        spot: Spot(character: "C", color: .DarkSeaGreen)
+        spot: Spot(character: "C", color: .darkSeaGreen)
     )
     public private(set) static var `struct` = Stereotype(
-        name: "struct", spot: Spot(character: "S", color: .SkyBlue)
+        name: "struct", spot: Spot(character: "S", color: .skyBlue)
     )
     public private(set) static var `extension` = Stereotype(
-        name: "extension", spot: Spot(character: "X", color: .Orchid)
+        name: "extension", spot: Spot(character: "X", color: .orchid)
     )
     public private(set) static var `enum` = Stereotype(
-        name: "enum", spot: Spot(character: "E", color: .LightSteelBlue)
+        name: "enum", spot: Spot(character: "E", color: .lightSteelBlue)
     )
     public private(set) static var `protocol` = Stereotype(
-        name: "protocol", spot: Spot(character: "P", color: .GoldenRod)
+        name: "protocol", spot: Spot(character: "P", color: .goldenRod)
     )
     public private(set) static var actor = Stereotype(
-        name: "actor", spot: Spot(character: "A", color: .CadetBlue)
+        name: "actor", spot: Spot(character: "A", color: .cadetBlue)
     )
 }
 

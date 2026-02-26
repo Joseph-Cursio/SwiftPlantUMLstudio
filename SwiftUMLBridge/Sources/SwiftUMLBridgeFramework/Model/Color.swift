@@ -1,29 +1,25 @@
 import Foundation
 
-// swiftlint:disable identifier_name
-/// Colors supported by PlantUML
-/// - Note: Case names use PascalCase to match PlantUML HTML color name strings exactly.
-///   These are used as raw values in PlantUML output and must not be renamed.
+/// Colors supported by PlantUML (HTML color names, matched case-insensitively by PlantUML)
 public enum Color: String, CaseIterable, Codable {
-    case AliceBlue, AntiqueWhite, Aqua, Aquamarine, Azure, Beige, Bisque, Black
-    case BlanchedAlmond, Blue, BlueViolet, Brown, BurlyWood, CadetBlue, Chartreuse, Chocolate
-    case Coral, CornflowerBlue, Cornsilk, Crimson, Cyan, DarkBlue, DarkCyan, DarkGoldenRod
-    case DarkGray, DarkGreen, DarkGrey, DarkKhaki, DarkMagenta, DarkOliveGreen, DarkOrchid, DarkRed
-    case DarkSalmon, DarkSeaGreen, DarkSlateBlue, DarkSlateGray, DarkSlateGrey, DarkTurquoise, DarkViolet, Darkorange
-    case DeepPink, DeepSkyBlue, DimGray, DimGrey, DodgerBlue, FireBrick, FloralWhite, ForestGreen
-    case Fuchsia, Gainsboro, GhostWhite, Gold, GoldenRod, Gray, Green, GreenYellow
-    case Grey, HoneyDew, HotPink, IndianRed, Indigo, Ivory, Khaki, Lavender
-    case LavenderBlush, LawnGreen, LemonChiffon, LightBlue, LightCoral, LightCyan, LightGoldenRodYellow, LightGray
-    case LightGreen, LightGrey, LightPink, LightSalmon, LightSeaGreen, LightSkyBlue, LightSlateGray, LightSlateGrey
-    case LightSteelBlue, LightYellow, Lime, LimeGreen, Linen, Magenta, Maroon, MediumAquaMarine
-    case MediumBlue, MediumOrchid, MediumPurple, MediumSeaGreen
-    case MediumSlateBlue, MediumSpringGreen, MediumTurquoise, MediumVioletRed
-    case MidnightBlue, MintCream, MistyRose, Moccasin, NavajoWhite, Navy, OldLace, Olive
-    case OliveDrab, Orange, OrangeRed, Orchid, PaleGoldenRod, PaleGreen, PaleTurquoise, PaleVioletRed
-    case PapayaWhip, PeachPuff, Peru, Pink, Plum, PowderBlue, Purple, Red
-    case RosyBrown, RoyalBlue, SaddleBrown, Salmon, SandyBrown, SeaGreen, SeaShell, Sienna
-    case Silver, SkyBlue, SlateBlue, SlateGray, SlateGrey, Snow, SpringGreen, SteelBlue
-    case Tan, Teal, Thistle, Tomato, Turquoise, Violet, Wheat, White
-    case WhiteSmoke, Yellow, YellowGreen
+    case aliceBlue, antiqueWhite, aqua, aquamarine, azure, beige, bisque, black
+    case blanchedAlmond, blue, blueViolet, brown, burlyWood, cadetBlue, chartreuse, chocolate
+    case coral, cornflowerBlue, cornsilk, crimson, cyan, darkBlue, darkCyan, darkGoldenRod
+    case darkGray, darkGreen, darkGrey, darkKhaki, darkMagenta, darkOliveGreen, darkOrchid, darkRed
+    case darkSalmon, darkSeaGreen, darkSlateBlue, darkSlateGray, darkSlateGrey, darkTurquoise, darkViolet, darkOrange
+    case deepPink, deepSkyBlue, dimGray, dimGrey, dodgerBlue, fireBrick, floralWhite, forestGreen
+    case fuchsia, gainsboro, ghostWhite, gold, goldenRod, gray, green, greenYellow
+    case grey, honeyDew, hotPink, indianRed, indigo, ivory, khaki, lavender
+    case lavenderBlush, lawnGreen, lemonChiffon, lightBlue, lightCoral, lightCyan, lightGoldenRodYellow, lightGray
+    case lightGreen, lightGrey, lightPink, lightSalmon, lightSeaGreen, lightSkyBlue, lightSlateGray, lightSlateGrey
+    case lightSteelBlue, lightYellow, lime, limeGreen, linen, magenta, maroon, mediumAquaMarine
+    case mediumBlue, mediumOrchid, mediumPurple, mediumSeaGreen
+    case mediumSlateBlue, mediumSpringGreen, mediumTurquoise, mediumVioletRed
+    case midnightBlue, mintCream, mistyRose, moccasin, navajoWhite, navy, oldLace, olive
+    case oliveDrab, orange, orangeRed, orchid, paleGoldenRod, paleGreen, paleTurquoise, paleVioletRed
+    case papayaWhip, peachPuff, peru, pink, plum, powderBlue, purple, red
+    case rosyBrown, royalBlue, saddleBrown, salmon, sandyBrown, seaGreen, seaShell, sienna
+    case silver, skyBlue, slateBlue, slateGray, slateGrey, snow, springGreen, steelBlue
+    case tan, teal, thistle, tomato, turquoise, violet, wheat, white
+    case whiteSmoke, yellow, yellowGreen
 }
-// swiftlint:enable identifier_name

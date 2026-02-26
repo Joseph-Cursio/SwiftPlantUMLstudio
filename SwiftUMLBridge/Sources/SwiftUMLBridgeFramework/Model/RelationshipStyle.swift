@@ -12,8 +12,8 @@ public enum RelationshipInlineStyle: String, Codable {
 /// Style information for a relation and its label
 public struct RelationshipStyle: Codable {
     public private(set) var lineStyle: RelationshipInlineStyle = .plain
-    public private(set) var lineColor: Color = .Black
-    public private(set) var textColor: Color = .Black
+    public private(set) var lineColor: Color = .black
+    public private(set) var textColor: Color = .black
 
     var plantuml: String {
         "#line:\(lineColor);line.\(lineStyle);text:\(textColor)"
