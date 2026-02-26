@@ -1,0 +1,83 @@
+@startuml
+' STYLE START
+hide empty members
+skinparam shadowing false
+' STYLE END
+set namespaceSeparator none
+
+
+class "aProtocol" as aProtocol << (P, GoldenRod) protocol >> {
+  ~aProtocolInstanceVar : String
+  ~aProtocolInstanceMethod(param1:param2:)
+}
+class "aClass" as aClass << (C, DarkSeaGreen) >> {
+  +init()
+  +aPublicInstanceVar : String
+  +{static} aStaticPublicInstanceVar : String
+  ~anInternalInstanceVar : Double
+  -aPrivateInstanceVar : Int
+  -aPublicInstanceVarTypeInference
+  +aPublicInstanceMethod(param1:param2:)
+  +{static} aStaticPublicInstanceMethod(param1:param2:)
+}
+class "anInternalSubClass" as anInternalSubClass << (C, DarkSeaGreen) >> {
+  +init()
+  +aSubInstanceVar : String
+  +aSubInstanceMethod(param1:param2:)
+  +linkToStruct : aPublicStruct?
+}
+class "anInternalClass" as anInternalClass << (C, DarkSeaGreen) >> {
+  ~anInternalInstanceVar : Double
+}
+class "aPrivateClass" as aPrivateClass << (C, DarkSeaGreen) >> {
+  ~anInternalInstanceVar : Double
+}
+class "aPrivateGenericClass" as aPrivateGenericClass<Element> << (C, DarkSeaGreen) >> {
+  ~elements : [Element]
+}
+class "aPrivateGenericSubClass" as aPrivateGenericSubClass<Element> << (C, DarkSeaGreen) >> {
+  -otherProp : String
+}
+class "aPublicStruct" as aPublicStruct << (S, SkyBlue) struct >> {
+  +aPublicInstanceVar : String
+  ~anInternalInstanceVar : Double
+  -aPrivateInstanceVar : Int
+  -aPublicInstanceVarTypeInference
+  +aPublicInstanceMethod(param1:param2:)
+  +{static} aStaticPublicInstanceMethod(param1:param2:)
+}
+class "anInternalStruct" as anInternalStruct << (S, SkyBlue) struct >> {
+  ~anInternalInstanceVar : Double
+  -aPrivateInstanceVar : Int
+  -aPublicInstanceVarTypeInference
+}
+class "AnEnum" as AnEnum << (E, LightSteelBlue) enum >> {
+  +simpleCase
+  +caseWithRaw(_:)
+  +caseWithRaw(_:_:)
+  ~anInternalInstanceMethod()
+  ~{static} aStaticInternalMethod()
+  ~anInternalComputedVar : AnEnum
+}
+class "aPublicStruct" as aPublicStruct0 << (X, Orchid) extension >> {
+  +anExtensionComputedInstanceVar : String
+  +anExtensionInstanceMethod(param1:param2:)
+}
+class "aPublicStruct" as aPublicStruct1 << (X, Orchid) extension >> {
+  ~aProtocolInstanceVar : String
+  ~aProtocolInstanceMethod(param1:param2:)
+}
+class "anInternalStruct" as anInternalStruct2 << (X, Orchid) extension >> {
+  ~anExtensionComputedInstanceVar : String
+}
+class "anInternalStruct" as anInternalStruct3 << (X, Orchid) extension >> {
+  -anFileprivateExtensionComputedInstanceVar : String
+}
+aClass <|-- anInternalSubClass : inherits
+aPrivateGenericClass <|-- aPrivateGenericSubClass : inherits
+aProtocol <|.. aPublicStruct : conforms to
+aPublicStruct <.. aPublicStruct0 : ext
+aPublicStruct <.. aPublicStruct1 : ext
+anInternalStruct <.. anInternalStruct2 : ext
+anInternalStruct <.. anInternalStruct3 : ext
+@enduml
