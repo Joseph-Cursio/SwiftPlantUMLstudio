@@ -4,38 +4,80 @@ extension SyntaxStructure {
     /// Textual representation of this element in PlantUML scripting language
     func plantuml(context: DiagramContext) -> String? {
         guard let kind = kind else { return nil }
-
         guard skip(element: self, basedOn: context.configuration) == false else { return nil }
 
-        var generics: String?
-        if context.configuration.elements.showGenerics {
-            generics = genericsStatement()
-        }
-
-        var textualRepresentation = ""
-        switch kind {
-        case ElementKind.class:
-            textualRepresentation = "class \"\(displayName!)\" as \(context.uniqName(item: self, relationship: "inherits"))\(generics ?? "") \(context.configuration.stereotypes.class?.plantuml ?? Stereotype.class.plantuml) { \(members(context: context)) \n}"
-        case ElementKind.struct:
-            textualRepresentation = "class \"\(displayName!)\" as \(context.uniqName(item: self, relationship: "inherits"))\(generics ?? "") \(context.configuration.stereotypes.struct?.plantuml ?? Stereotype.struct.plantuml) { \(members(context: context)) \n}"
-        case ElementKind.extension:
-            textualRepresentation = "class \"\(displayName!)\" as \(context.uniqName(item: self, relationship: "ext"))\(generics ?? "") \(context.configuration.stereotypes.extension?.plantuml ?? Stereotype.extension.plantuml) { \(members(context: context)) \n}"
-        case ElementKind.enum:
-            textualRepresentation = "class \"\(displayName!)\" as \(context.uniqName(item: self, relationship: ""))\(generics ?? "") \(context.configuration.stereotypes.enum?.plantuml ?? Stereotype.enum.plantuml) { \(members(context: context)) \n}"
-        case ElementKind.protocol:
-            textualRepresentation = "class \"\(displayName!)\" as \(context.uniqName(item: self, relationship: "conforms to"))\(generics ?? "") \(context.configuration.stereotypes.protocol?.plantuml ?? Stereotype.protocol.plantuml) { \(members(context: context)) \n}"
-        case ElementKind.actor:
-            // Render Swift actors as a class node with <<actor>> stereotype
-            textualRepresentation = "class \"\(displayName!)\" as \(context.uniqName(item: self, relationship: "actor"))\(generics ?? "") \(Stereotype.actor.plantuml) { \(members(context: context)) \n}"
-        case ElementKind.macro:
-            // Render Swift macros as a note placeholder
-            textualRepresentation = "note as \(context.uniqName(item: self, relationship: "macro"))\n  <<macro>> \(displayName ?? "unknown")\nend note"
-        default:
-            BridgeLogger.shared.error("element kind not supported for PlantUML rendering: \(kind.rawValue)")
+        let generics: String? = context.configuration.elements.showGenerics ? genericsStatement() : nil
+        guard let textualRepresentation = plantUMLText(for: kind, generics: generics, context: context) else {
             return nil
         }
         addLinking(context: context)
         return textualRepresentation
+    }
+
+    // Maps an ElementKind to its PlantUML textual representation.
+    private func plantUMLText(
+        for kind: ElementKind,
+        generics: String?,
+        context: DiagramContext
+    ) -> String? {
+        let stereotypes = context.configuration.stereotypes
+        switch kind {
+        case ElementKind.class:
+            return plantUMLClassNode(
+                relationship: "inherits",
+                stereotype: stereotypes.class?.plantuml ?? Stereotype.class.plantuml,
+                generics: generics, context: context
+            )
+        case ElementKind.struct:
+            return plantUMLClassNode(
+                relationship: "inherits",
+                stereotype: stereotypes.struct?.plantuml ?? Stereotype.struct.plantuml,
+                generics: generics, context: context
+            )
+        case ElementKind.extension:
+            return plantUMLClassNode(
+                relationship: "ext",
+                stereotype: stereotypes.extension?.plantuml ?? Stereotype.extension.plantuml,
+                generics: generics, context: context
+            )
+        case ElementKind.enum:
+            return plantUMLClassNode(
+                relationship: "",
+                stereotype: stereotypes.enum?.plantuml ?? Stereotype.enum.plantuml,
+                generics: generics, context: context
+            )
+        case ElementKind.protocol:
+            return plantUMLClassNode(
+                relationship: "conforms to",
+                stereotype: stereotypes.protocol?.plantuml ?? Stereotype.protocol.plantuml,
+                generics: generics, context: context
+            )
+        case ElementKind.actor:
+            return plantUMLClassNode(
+                relationship: "actor",
+                stereotype: Stereotype.actor.plantuml,
+                generics: generics, context: context
+            )
+        case ElementKind.macro:
+            let macroName = context.uniqName(item: self, relationship: "macro")
+            return "note as \(macroName)\n  <<macro>> \(displayName ?? "unknown")\nend note"
+        default:
+            BridgeLogger.shared.error("element kind not supported for PlantUML rendering: \(kind.rawValue)")
+            return nil
+        }
+    }
+
+    /// Build a PlantUML class-node declaration line for this element.
+    private func plantUMLClassNode(
+        relationship: String,
+        stereotype: String,
+        generics: String?,
+        context: DiagramContext
+    ) -> String {
+        let alias = context.uniqName(item: self, relationship: relationship)
+        let genericsStr = generics ?? ""
+        let body = members(context: context)
+        return "class \"\(displayName!)\" as \(alias)\(genericsStr) \(stereotype) { \(body) \n}"
     }
 
     private func addLinking(context: DiagramContext) {
@@ -86,8 +128,10 @@ extension SyntaxStructure {
         }
 
         if kind! != .extension {
-            let generateMembersWithAccessLevel: [ElementAccessibility] = context.configuration.elements.showMembersWithAccessLevel.map { ElementAccessibility(orig: $0)! }
-            if generateMembersWithAccessLevel.contains(actualElement.accessibility ?? ElementAccessibility.internal) == false {
+            let generateMembersWithAccessLevel: [ElementAccessibility] = context.configuration.elements
+                .showMembersWithAccessLevel.map { ElementAccessibility(orig: $0)! }
+            let effectiveAccessibility = actualElement.accessibility ?? ElementAccessibility.internal
+            if generateMembersWithAccessLevel.contains(effectiveAccessibility) == false {
                 return nil
             }
         }
@@ -144,8 +188,10 @@ extension SyntaxStructure {
         guard let elementKind = element.kind else { return true }
 
         if elementKind != .extension {
-            let generateElementsWithAccessLevel: [ElementAccessibility] = configuration.elements.havingAccessLevel.map { ElementAccessibility(orig: $0)! }
-            guard generateElementsWithAccessLevel.contains(accessibility ?? ElementAccessibility.internal) else { return true }
+            let generateElementsWithAccessLevel: [ElementAccessibility] = configuration.elements
+                .havingAccessLevel.map { ElementAccessibility(orig: $0)! }
+            let effectiveAccessibility = accessibility ?? ElementAccessibility.internal
+            guard generateElementsWithAccessLevel.contains(effectiveAccessibility) else { return true }
         }
 
         if configuration.elements.showExtensions.safelyUnwrap == .none, kind == .extension {

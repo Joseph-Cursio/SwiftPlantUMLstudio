@@ -37,7 +37,7 @@ extension Array where Element == SyntaxStructure {
 
     func populateNestedTypes(parent: SyntaxStructure? = nil) -> [SyntaxStructure] {
         var items: [SyntaxStructure] = []
-        for structure in self where structure.kind == .class || structure.kind == .struct || structure.kind == .enum || structure.kind == .extension || structure.kind == .actor {
+        for structure in self where isNestedType(structure) {
             structure.parent = parent
             items.append(structure)
             guard let substructure = structure.substructure, substructure.count > 0 else {
@@ -46,24 +46,32 @@ extension Array where Element == SyntaxStructure {
             items.append(contentsOf: substructure.populateNestedTypes(parent: structure))
         }
         if parent == nil {
-            for structure in self where structure.kind != .class && structure.kind != .struct && structure.kind != .enum && structure.kind != .extension && structure.kind != .actor {
+            for structure in self where !isNestedType(structure) {
                 items.append(structure)
             }
         }
         return items
     }
+
+    private func isNestedType(_ structure: SyntaxStructure) -> Bool {
+        structure.kind == .class
+            || structure.kind == .struct
+            || structure.kind == .enum
+            || structure.kind == .extension
+            || structure.kind == .actor
+    }
 }
 
 extension SyntaxStructure {
     var fullName: String? {
-        var fn = name
+        var qualifiedName = name
         var aParent: SyntaxStructure?
         aParent = parent
         while aParent != nil {
-            fn = (aParent?.name ?? "") + "." + (fn ?? "")
+            qualifiedName = (aParent?.name ?? "") + "." + (qualifiedName ?? "")
             aParent = aParent?.parent
         }
-        return fn
+        return qualifiedName
     }
 
     var displayName: String? {

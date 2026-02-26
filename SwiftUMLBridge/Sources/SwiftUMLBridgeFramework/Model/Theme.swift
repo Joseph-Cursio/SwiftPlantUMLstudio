@@ -2,7 +2,10 @@ import Foundation
 
 /// Built-in themes for PlantUML diagrams
 public enum Theme: Codable {
-    public static var preferred: [Theme] = [.amiga, .carbonGray, .cloudscapeDesign, .mars, .minty, .plain, .reddressDarkblue, .sketchy, .sketchyOutline, .toy]
+    public static var preferred: [Theme] = [
+        .amiga, .carbonGray, .cloudscapeDesign, .mars, .minty,
+        .plain, .reddressDarkblue, .sketchy, .sketchyOutline, .toy
+    ]
 
     case amiga, awsOrange, blackKnight, bluegray, blueprint
     case carbonGray, ceruleanOutline, cerulean, cloudscapeDesign, crtAmber

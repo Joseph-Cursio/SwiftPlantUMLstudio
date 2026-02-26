@@ -2,7 +2,13 @@ import Foundation
 
 /// Descriptive texts you can add around your diagram
 public struct PageTexts: Codable {
-    internal init(header: String? = nil, title: String? = nil, legend: String? = nil, caption: String? = nil, footer: String? = nil) {
+    internal init(
+        header: String? = nil,
+        title: String? = nil,
+        legend: String? = nil,
+        caption: String? = nil,
+        footer: String? = nil
+    ) {
         self.header = header
         self.title = title
         self.legend = legend

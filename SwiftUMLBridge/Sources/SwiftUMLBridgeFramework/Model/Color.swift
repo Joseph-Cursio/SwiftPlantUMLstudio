@@ -1,6 +1,9 @@
 import Foundation
 
+// swiftlint:disable identifier_name
 /// Colors supported by PlantUML
+/// - Note: Case names use PascalCase to match PlantUML HTML color name strings exactly.
+///   These are used as raw values in PlantUML output and must not be renamed.
 public enum Color: String, CaseIterable, Codable {
     case AliceBlue, AntiqueWhite, Aqua, Aquamarine, Azure, Beige, Bisque, Black
     case BlanchedAlmond, Blue, BlueViolet, Brown, BurlyWood, CadetBlue, Chartreuse, Chocolate
@@ -13,7 +16,8 @@ public enum Color: String, CaseIterable, Codable {
     case LavenderBlush, LawnGreen, LemonChiffon, LightBlue, LightCoral, LightCyan, LightGoldenRodYellow, LightGray
     case LightGreen, LightGrey, LightPink, LightSalmon, LightSeaGreen, LightSkyBlue, LightSlateGray, LightSlateGrey
     case LightSteelBlue, LightYellow, Lime, LimeGreen, Linen, Magenta, Maroon, MediumAquaMarine
-    case MediumBlue, MediumOrchid, MediumPurple, MediumSeaGreen, MediumSlateBlue, MediumSpringGreen, MediumTurquoise, MediumVioletRed
+    case MediumBlue, MediumOrchid, MediumPurple, MediumSeaGreen
+    case MediumSlateBlue, MediumSpringGreen, MediumTurquoise, MediumVioletRed
     case MidnightBlue, MintCream, MistyRose, Moccasin, NavajoWhite, Navy, OldLace, Olive
     case OliveDrab, Orange, OrangeRed, Orchid, PaleGoldenRod, PaleGreen, PaleTurquoise, PaleVioletRed
     case PapayaWhip, PeachPuff, Peru, Pink, Plum, PowderBlue, Purple, Red
@@ -22,3 +26,4 @@ public enum Color: String, CaseIterable, Codable {
     case Tan, Teal, Thistle, Tomato, Turquoise, Violet, Wheat, White
     case WhiteSmoke, Yellow, YellowGreen
 }
+// swiftlint:enable identifier_name

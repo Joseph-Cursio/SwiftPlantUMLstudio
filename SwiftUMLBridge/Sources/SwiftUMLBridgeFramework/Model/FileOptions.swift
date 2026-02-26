@@ -23,7 +23,9 @@ extension FileOptions: CustomStringConvertible {
             } else if excludeArray.isEmpty {
                 return "include: \(includeArray.joined(separator: ", "))"
             } else {
-                return "include: \(includeArray.joined(separator: ", ")) && exclude: \(excludeArray.joined(separator: ", "))"
+                let includeStr = includeArray.joined(separator: ", ")
+                let excludeStr = excludeArray.joined(separator: ", ")
+                return "include: \(includeStr) && exclude: \(excludeStr)"
             }
         }
     }

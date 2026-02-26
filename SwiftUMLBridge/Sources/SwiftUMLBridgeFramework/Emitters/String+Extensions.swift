@@ -38,7 +38,10 @@ internal extension String {
 }
 
 internal extension String {
-    mutating func addOrSkipMemberAccessLevelAttribute(for element: SyntaxStructure, basedOn configuration: Configuration) {
+    mutating func addOrSkipMemberAccessLevelAttribute(
+        for element: SyntaxStructure,
+        basedOn configuration: Configuration
+    ) {
         guard configuration.elements.showMemberAccessLevelAttribute == true else { return }
         guard let indicator = element.accessibility.indicator else { return }
         self += indicator

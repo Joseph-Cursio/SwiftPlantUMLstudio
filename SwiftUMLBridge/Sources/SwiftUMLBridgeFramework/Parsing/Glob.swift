@@ -19,8 +19,8 @@ internal enum Glob: CustomStringConvertible {
 
     internal func matches(_ path: String) -> Bool {
         switch self {
-        case let .path(_path):
-            return _path == path || path.contains(_path)
+        case let .path(globPath):
+            return globPath == path || path.contains(globPath)
         case let .regex(regex):
             let range = NSRange(location: 0, length: path.utf16.count)
             return regex.firstMatch(in: path, options: [], range: range) != nil
@@ -96,7 +96,12 @@ internal func expandGlobs(_ paths: String, in directory: String) -> [Glob] {
         for (token, replacement) in tokens {
             regex = regex.replacingOccurrences(of: token, with: replacement)
         }
-        return try! .regex(NSRegularExpression(pattern: regex, options: []))
+        do {
+            return try .regex(NSRegularExpression(pattern: regex, options: []))
+        } catch {
+            BridgeLogger.shared.error("failed to compile glob regex '\(regex)': \(error)")
+            return .path(path)
+        }
     }
 }
 
@@ -115,10 +120,11 @@ func matchGlobs(_ globs: [Glob], in directory: String) -> [URL] {
             var isDirectory: ObjCBool = false
             if globs.contains(where: { $0.matches(path) }) {
                 urls.append(url)
-            } else if manager.fileExists(atPath: path, isDirectory: &isDirectory),
-                      isDirectory.boolValue
-            {
-                enumerate(url)
+            } else {
+                let exists = manager.fileExists(atPath: path, isDirectory: &isDirectory)
+                if exists, isDirectory.boolValue {
+                    enumerate(url)
+                }
             }
         }
     }

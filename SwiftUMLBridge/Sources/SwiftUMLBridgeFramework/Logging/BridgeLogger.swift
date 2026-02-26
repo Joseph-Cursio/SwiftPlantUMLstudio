@@ -13,7 +13,12 @@ public final class BridgeLogger {
         logger.error("\(message, privacy: .public)")
     }
 
-    public func warning(_ message: String, _ file: String = #file, _ function: String = #function, _ line: Int = #line) {
+    public func warning(
+        _ message: String,
+        _ file: String = #file,
+        _ function: String = #function,
+        _ line: Int = #line
+    ) {
         logger.warning("\(message, privacy: .public)")
     }
 

@@ -10,6 +10,7 @@ extension SwiftUMLBridgeCLI {
             helpNames: [.short, .long]
         )
 
+        // swiftlint:disable:next line_length
         @Option(help: "Path to custom configuration file (otherwise searches for '.swiftumlbridge.yml' in current directory)")
         var config: String?
 
@@ -61,11 +62,20 @@ extension SwiftUMLBridgeCLI {
 
             switch output {
             case .browserImageOnly:
-                generator.generate(for: files.map(\.path), with: bridgeConfig, presentedBy: BrowserPresenter(format: .png), sdkPath: sdk)
+                generator.generate(
+                    for: files.map(\.path), with: bridgeConfig,
+                    presentedBy: BrowserPresenter(format: .png), sdkPath: sdk
+                )
             case .consoleOnly:
-                generator.generate(for: files.map(\.path), with: bridgeConfig, presentedBy: ConsolePresenter(), sdkPath: sdk)
+                generator.generate(
+                    for: files.map(\.path), with: bridgeConfig,
+                    presentedBy: ConsolePresenter(), sdkPath: sdk
+                )
             default:
-                generator.generate(for: files.map(\.path), with: bridgeConfig, presentedBy: BrowserPresenter(format: .default), sdkPath: sdk)
+                generator.generate(
+                    for: files.map(\.path), with: bridgeConfig,
+                    presentedBy: BrowserPresenter(format: .default), sdkPath: sdk
+                )
             }
         }
     }

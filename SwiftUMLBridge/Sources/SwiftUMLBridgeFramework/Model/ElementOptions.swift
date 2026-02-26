@@ -16,7 +16,9 @@ public struct ElementOptions: Codable {
         if let havingAccessLevel = try container.decodeIfPresent([AccessLevel].self, forKey: .havingAccessLevel) {
             self.havingAccessLevel = havingAccessLevel
         }
-        if let showMembersWithAccessLevel = try container.decodeIfPresent([AccessLevel].self, forKey: .showMembersWithAccessLevel) {
+        if let showMembersWithAccessLevel = try container.decodeIfPresent(
+            [AccessLevel].self, forKey: .showMembersWithAccessLevel
+        ) {
             self.showMembersWithAccessLevel = showMembersWithAccessLevel
         }
         if let showNestedTypes = try container.decodeIfPresent(Bool.self, forKey: .showNestedTypes) {
@@ -30,10 +32,14 @@ public struct ElementOptions: Codable {
         } else if let showExtensionsBoolean = try? container.decodeIfPresent(Bool.self, forKey: .showExtensions) {
             showExtensions = ExtensionVisualization.from(showExtensionsBoolean)
         }
-        if let mergedExtensionMemberIndicator = try container.decodeIfPresent(String.self, forKey: .mergedExtensionMemberIndicator) {
+        if let mergedExtensionMemberIndicator = try container.decodeIfPresent(
+            String.self, forKey: .mergedExtensionMemberIndicator
+        ) {
             self.mergedExtensionMemberIndicator = mergedExtensionMemberIndicator
         }
-        if let showMemberAccessLevelAttribute = try container.decodeIfPresent(Bool.self, forKey: .showMemberAccessLevelAttribute) {
+        if let showMemberAccessLevelAttribute = try container.decodeIfPresent(
+            Bool.self, forKey: .showMemberAccessLevelAttribute
+        ) {
             self.showMemberAccessLevelAttribute = showMemberAccessLevelAttribute
         }
         if let exclude = try container.decodeIfPresent([String].self, forKey: .exclude) {

@@ -84,10 +84,14 @@ public struct FileCollector {
         let isDirectory = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
         if isDirectory {
             var files = [URL]()
-            if let enumerator = FileManager.default.enumerator(at: url, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles, .skipsPackageDescendants]) {
+            let options: FileManager.DirectoryEnumerationOptions = [.skipsHiddenFiles, .skipsPackageDescendants]
+            if let enumerator = FileManager.default.enumerator(
+                at: url, includingPropertiesForKeys: [.isRegularFileKey], options: options
+            ) {
                 for case let fileURL as URL in enumerator {
                     do {
-                        let fileAttributes = try fileURL.resourceValues(forKeys: [.isRegularFileKey, .typeIdentifierKey])
+                        let resourceKeys: Set<URLResourceKey> = [.isRegularFileKey, .typeIdentifierKey]
+                        let fileAttributes = try fileURL.resourceValues(forKeys: resourceKeys)
                         if fileAttributes.isRegularFile!, fileAttributes.typeIdentifier == "public.swift-source" {
                             files.append(fileURL)
                         }

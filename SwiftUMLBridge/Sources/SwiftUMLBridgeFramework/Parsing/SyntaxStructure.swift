@@ -2,7 +2,18 @@ import Foundation
 
 /// Swift type representing an AST element (analogue to SourceKitten's Structure)
 internal class SyntaxStructure: NSObject, Codable {
-    internal init(accessibility: ElementAccessibility? = nil, attribute: String? = nil, attributes: [SyntaxStructure]? = nil, elements: [SyntaxStructure]? = nil, inheritedTypes: [SyntaxStructure]? = nil, kind: ElementKind? = nil, name: String? = nil, runtimename: String? = nil, substructure: [SyntaxStructure]? = nil, typename: String? = nil) {
+    internal init(
+        accessibility: ElementAccessibility? = nil,
+        attribute: String? = nil,
+        attributes: [SyntaxStructure]? = nil,
+        elements: [SyntaxStructure]? = nil,
+        inheritedTypes: [SyntaxStructure]? = nil,
+        kind: ElementKind? = nil,
+        name: String? = nil,
+        runtimename: String? = nil,
+        substructure: [SyntaxStructure]? = nil,
+        typename: String? = nil
+    ) {
         self.accessibility = accessibility
         self.attribute = attribute
         self.attributes = attributes

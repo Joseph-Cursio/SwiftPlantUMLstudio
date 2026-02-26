@@ -12,7 +12,17 @@ public enum AccessLevel: String, Codable {
 
 /// Configuration options to influence the generation and visual representation of the class diagram
 public struct Configuration: Codable {
-    public init(files: FileOptions = FileOptions(), elements: ElementOptions = ElementOptions(), hideShowCommands: [String]? = ["hide empty members"], skinparamCommands: [String]? = ["skinparam shadowing false"], includeRemoteURL: String? = nil, theme: Theme? = nil, relationships: RelationshipOptions = RelationshipOptions(), stereotypes: Stereotypes = Stereotypes.default, texts: PageTexts? = nil) {
+    public init(
+        files: FileOptions = FileOptions(),
+        elements: ElementOptions = ElementOptions(),
+        hideShowCommands: [String]? = ["hide empty members"],
+        skinparamCommands: [String]? = ["skinparam shadowing false"],
+        includeRemoteURL: String? = nil,
+        theme: Theme? = nil,
+        relationships: RelationshipOptions = RelationshipOptions(),
+        stereotypes: Stereotypes = Stereotypes.default,
+        texts: PageTexts? = nil
+    ) {
         self.files = files
         self.elements = elements
         self.hideShowCommands = hideShowCommands
@@ -64,7 +74,13 @@ public struct Configuration: Codable {
     public private(set) var includeRemoteURL: String?
     public private(set) var theme: Theme?
     public var relationships = RelationshipOptions()
-    public private(set) var stereotypes = Stereotypes(classStereotype: Stereotype.class, structStereotype: Stereotype.struct, extensionStereotype: Stereotype.extension, enumStereotype: Stereotype.enum, protocolStereotype: Stereotype.protocol)
+    public private(set) var stereotypes = Stereotypes(
+        classStereotype: Stereotype.class,
+        structStereotype: Stereotype.struct,
+        extensionStereotype: Stereotype.extension,
+        enumStereotype: Stereotype.enum,
+        protocolStereotype: Stereotype.protocol
+    )
     public var texts: PageTexts?
 
     internal var shallExtensionsBeMerged: Bool {

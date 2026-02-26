@@ -39,7 +39,8 @@ public struct DiagramScript {
         adjustedItems = adjustedItems.orderedByProtocolsFirstExtensionsLast()
 
         if context.configuration.shallExtensionsBeMerged {
-            adjustedItems = adjustedItems.mergeExtensions(mergedMemberIndicator: context.configuration.elements.mergedExtensionMemberIndicator)
+            let indicator = context.configuration.elements.mergedExtensionMemberIndicator
+            adjustedItems = adjustedItems.mergeExtensions(mergedMemberIndicator: indicator)
         }
 
         for (index, element) in adjustedItems.enumerated() {
@@ -50,7 +51,9 @@ public struct DiagramScript {
 
         context.collectNestedTypeConnections(items: adjustedItems)
 
-        let definitions = mainContent + newLine + context.connections.joined(separator: newLine) + newLine + context.extnConnections.joined(separator: newLine)
+        let connections = context.connections.joined(separator: newLine)
+        let extnConnections = context.extnConnections.joined(separator: newLine)
+        let definitions = mainContent + newLine + connections + newLine + extnConnections
 
         text.appendAsNewLine(definitions)
         text.appendAsNewLine("@enduml")

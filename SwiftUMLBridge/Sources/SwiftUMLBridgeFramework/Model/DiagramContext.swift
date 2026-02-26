@@ -29,8 +29,13 @@ class DiagramContext {
             linkTo = "\"\(linkTo)\""
         }
 
-        guard skipLinking(element: parent, basedOn: configuration.relationships.inheritance?.exclude) == false else { return }
-        let namedConnection = (uniqElementAndTypes[linkTo] != nil) ? "\(uniqElementAndTypes[linkTo] ?? "--ERROR--")" : "inherits"
+        guard skipLinking(
+            element: parent,
+            basedOn: configuration.relationships.inheritance?.exclude
+        ) == false else { return }
+        let namedConnection = (uniqElementAndTypes[linkTo] != nil)
+            ? "\(uniqElementAndTypes[linkTo] ?? "--ERROR--")"
+            : "inherits"
         var linkTypeKey = item.fullName! + "LinkType"
 
         if uniqElementAndTypes[linkTo] == "conforms to" {
@@ -84,9 +89,9 @@ class DiagramContext {
         if uniqElementNames.contains(name) {
             newName += "\(index)"
             index += 1
-            if item.kind == ElementKind.extension,
-               uniqueNameForElement.keys.first(where: { $0.name == name && $0.kind != .extension }) != nil
-            {
+            let hasMatchingParent = uniqueNameForElement.keys
+                .first(where: { $0.name == name && $0.kind != .extension }) != nil
+            if item.kind == ElementKind.extension, hasMatchingParent {
                 var connect = "\(name) \(linkTypeDependency) \(newName)"
                 if let relStyle = configuration.relationships.dependency?.style?.plantuml {
                     connect += " \(relStyle)"

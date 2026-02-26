@@ -37,44 +37,44 @@ internal extension DiagramText {
             101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
             111, 112, 113, 114, 115, 116, 117, 118, 119, 120,
             121, 122, 45, 95,
-            61, // padding
+            61 // padding
         ]
 
         var encodedBytes: [UInt8] = []
         let padding = encodingAlphabetTable[64]
 
-        var i = 0
+        var byteIndex = 0
         let count = bytes.count
 
-        while i + 3 <= count {
-            let one = bytes[i] >> 2
-            let two = ((bytes[i] & 0b11) << 4) | ((bytes[i + 1] & 0b1111_0000) >> 4)
-            let three = ((bytes[i + 1] & 0b0000_1111) << 2) | ((bytes[i + 2] & 0b1100_0000) >> 6)
-            let four = bytes[i + 2] & 0b0011_1111
+        while byteIndex + 3 <= count {
+            let one = bytes[byteIndex] >> 2
+            let two = ((bytes[byteIndex] & 0b11) << 4) | ((bytes[byteIndex + 1] & 0b1111_0000) >> 4)
+            let three = ((bytes[byteIndex + 1] & 0b0000_1111) << 2) | ((bytes[byteIndex + 2] & 0b1100_0000) >> 6)
+            let four = bytes[byteIndex + 2] & 0b0011_1111
             encodedBytes.append(encodingAlphabetTable[Int(one)])
             encodedBytes.append(encodingAlphabetTable[Int(two)])
             encodedBytes.append(encodingAlphabetTable[Int(three)])
             encodedBytes.append(encodingAlphabetTable[Int(four)])
-            i += 3
+            byteIndex += 3
         }
 
-        if i + 2 == count {
-            let one = bytes[i] >> 2
-            let two = ((bytes[i] & 0b11) << 4) | ((bytes[i + 1] & 0b1111_0000) >> 4)
-            let three = ((bytes[i + 1] & 0b0000_1111) << 2)
+        if byteIndex + 2 == count {
+            let one = bytes[byteIndex] >> 2
+            let two = ((bytes[byteIndex] & 0b11) << 4) | ((bytes[byteIndex + 1] & 0b1111_0000) >> 4)
+            let three = ((bytes[byteIndex + 1] & 0b0000_1111) << 2)
             encodedBytes.append(encodingAlphabetTable[Int(one)])
             encodedBytes.append(encodingAlphabetTable[Int(two)])
             encodedBytes.append(encodingAlphabetTable[Int(three)])
             encodedBytes.append(padding)
-        } else if i + 1 == count {
-            let one = bytes[i] >> 2
-            let two = ((bytes[i] & 0b11) << 4)
+        } else if byteIndex + 1 == count {
+            let one = bytes[byteIndex] >> 2
+            let two = ((bytes[byteIndex] & 0b11) << 4)
             encodedBytes.append(encodingAlphabetTable[Int(one)])
             encodedBytes.append(encodingAlphabetTable[Int(two)])
             encodedBytes.append(padding)
             encodedBytes.append(padding)
         } else {
-            assert(i == count)
+            assert(byteIndex == count)
         }
 
         return String(decoding: encodedBytes, as: Unicode.UTF8.self)

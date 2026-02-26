@@ -50,7 +50,8 @@ public struct ConfigurationProvider {
             let decodingError = error as? DecodingError
             switch decodingError {
             case let .dataCorrupted(context):
-                BridgeLogger.shared.error("invalid value for \(context.codingPath.map(\.stringValue).joined(separator: ".")) in \(config.path)")
+                let codingPath = context.codingPath.map(\.stringValue).joined(separator: ".")
+                BridgeLogger.shared.error("invalid value for \(codingPath) in \(config.path)")
             case let .keyNotFound(missingKey, _):
                 BridgeLogger.shared.error("missing key \(missingKey.stringValue) in \(config.path)")
             default:

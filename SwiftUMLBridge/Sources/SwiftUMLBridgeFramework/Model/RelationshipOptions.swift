@@ -2,7 +2,11 @@ import Foundation
 
 /// Options which relationships to show and how to style them in a class diagram
 public struct RelationshipOptions: Codable {
-    public init(inheritance: Relationship? = Relationship(label: "inherits"), realize: Relationship? = Relationship(label: "conforms to"), dependency: Relationship? = Relationship(label: "ext")) {
+    public init(
+        inheritance: Relationship? = Relationship(label: "inherits"),
+        realize: Relationship? = Relationship(label: "conforms to"),
+        dependency: Relationship? = Relationship(label: "ext")
+    ) {
         self.inheritance = inheritance
         self.realize = realize
         self.dependency = dependency
