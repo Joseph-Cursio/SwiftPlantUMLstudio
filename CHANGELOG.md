@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Removed trailing commas from `Package.swift` collection literals (`trailing_comma` SwiftLint rule)
+- Renamed single-character variable `s` to `str`/`output` in `StringExtensionsTests` (`identifier_name` SwiftLint rule)
+
 ## [0.1.0] — 2026-02-27
 
 ### Added
