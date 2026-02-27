@@ -8,24 +8,24 @@ struct StringExtensionsTests {
 
     @Test("appendAsNewLine prepends a newline character")
     func appendAsNewLinePrependsNewline() {
-        var s = "first"
-        s.appendAsNewLine("second")
-        #expect(s == "first\nsecond")
+        var str = "first"
+        str.appendAsNewLine("second")
+        #expect(str == "first\nsecond")
     }
 
     @Test("appendAsNewLine on empty string produces newline prefix")
     func appendAsNewLineOnEmpty() {
-        var s = ""
-        s.appendAsNewLine("content")
-        #expect(s == "\ncontent")
+        var str = ""
+        str.appendAsNewLine("content")
+        #expect(str == "\ncontent")
     }
 
     @Test("appendAsNewLine can chain multiple appends")
     func appendAsNewLineMultiple() {
-        var s = "line1"
-        s.appendAsNewLine("line2")
-        s.appendAsNewLine("line3")
-        #expect(s == "line1\nline2\nline3")
+        var str = "line1"
+        str.appendAsNewLine("line2")
+        str.appendAsNewLine("line3")
+        #expect(str == "line1\nline2\nline3")
     }
 
     // MARK: - removeAngleBracketsWithContent
@@ -108,36 +108,36 @@ struct StringExtensionsTests {
 
     @Test("addOrSkipMemberAccessLevelAttribute adds + for public element")
     func addAccessLevelPublic() {
-        var s = ""
+        var output = ""
         let element = SyntaxStructure(accessibility: .public, kind: .functionMethodInstance, name: "foo")
-        s.addOrSkipMemberAccessLevelAttribute(for: element, basedOn: .default)
-        #expect(s == "+")
+        output.addOrSkipMemberAccessLevelAttribute(for: element, basedOn: .default)
+        #expect(output == "+")
     }
 
     @Test("addOrSkipMemberAccessLevelAttribute adds ~ for internal element")
     func addAccessLevelInternal() {
-        var s = ""
+        var output = ""
         let element = SyntaxStructure(accessibility: .internal, kind: .varInstance, name: "foo")
-        s.addOrSkipMemberAccessLevelAttribute(for: element, basedOn: .default)
-        #expect(s == "~")
+        output.addOrSkipMemberAccessLevelAttribute(for: element, basedOn: .default)
+        #expect(output == "~")
     }
 
     @Test("addOrSkipMemberAccessLevelAttribute adds - for private element")
     func addAccessLevelPrivate() {
-        var s = ""
+        var output = ""
         let element = SyntaxStructure(accessibility: .private, kind: .varInstance, name: "bar")
-        s.addOrSkipMemberAccessLevelAttribute(for: element, basedOn: .default)
-        #expect(s == "-")
+        output.addOrSkipMemberAccessLevelAttribute(for: element, basedOn: .default)
+        #expect(output == "-")
     }
 
     @Test("addOrSkipMemberAccessLevelAttribute skips when showMemberAccessLevelAttribute is false")
     func skipWhenDisabled() {
-        var s = ""
+        var output = ""
         let element = SyntaxStructure(accessibility: .public, kind: .functionMethodInstance, name: "foo")
         let config = Configuration(
             elements: ElementOptions(showMemberAccessLevelAttribute: false)
         )
-        s.addOrSkipMemberAccessLevelAttribute(for: element, basedOn: config)
-        #expect(s == "")
+        output.addOrSkipMemberAccessLevelAttribute(for: element, basedOn: config)
+        #expect(output == "")
     }
 }
