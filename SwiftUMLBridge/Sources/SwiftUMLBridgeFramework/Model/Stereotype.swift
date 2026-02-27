@@ -1,7 +1,7 @@
 import Foundation
 
 /// Stereotypes for entity types
-public struct Stereotypes: Codable {
+public struct Stereotypes: Codable, Sendable {
     public static var `default`: Stereotypes {
         Stereotypes(
             classStereotype: Stereotype.class,
@@ -34,7 +34,7 @@ public struct Stereotypes: Codable {
 }
 
 /// Spotted character with background color and optional name for a stereotype
-public struct Stereotype: Codable {
+public struct Stereotype: Codable, Sendable {
     public var name: String?
     public var spot: Spot
 
@@ -45,28 +45,28 @@ public struct Stereotype: Codable {
         return "<< (\(spot.character), \(spot.color.rawValue)) \(name) >>"
     }
 
-    public private(set) static var `class` = Stereotype(
+    public static let `class` = Stereotype(
         spot: Spot(character: "C", color: .darkSeaGreen)
     )
-    public private(set) static var `struct` = Stereotype(
+    public static let `struct` = Stereotype(
         name: "struct", spot: Spot(character: "S", color: .skyBlue)
     )
-    public private(set) static var `extension` = Stereotype(
+    public static let `extension` = Stereotype(
         name: "extension", spot: Spot(character: "X", color: .orchid)
     )
-    public private(set) static var `enum` = Stereotype(
+    public static let `enum` = Stereotype(
         name: "enum", spot: Spot(character: "E", color: .lightSteelBlue)
     )
-    public private(set) static var `protocol` = Stereotype(
+    public static let `protocol` = Stereotype(
         name: "protocol", spot: Spot(character: "P", color: .goldenRod)
     )
-    public private(set) static var actor = Stereotype(
+    public static let actor = Stereotype(
         name: "actor", spot: Spot(character: "A", color: .cadetBlue)
     )
 }
 
 /// Spotted character with background color
-public struct Spot: Codable {
+public struct Spot: Codable, Sendable {
     public var character: Character
     public var color: Color
 }

@@ -2,8 +2,8 @@ import ArgumentParser
 import Foundation
 import SwiftUMLBridgeFramework
 
-struct SwiftUMLBridgeCLI: ParsableCommand {
-    static var configuration = CommandConfiguration(
+struct SwiftUMLBridgeCLI: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
         commandName: "swiftumlbridge",
         abstract: "Generate architectural diagrams from Swift source code",
         version: SwiftUMLBridgeFramework.Version.current.value,

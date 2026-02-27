@@ -4,8 +4,7 @@ import Foundation
 public struct ConsolePresenter: DiagramPresenting {
     public init() {}
 
-    public func present(script: DiagramScript, completionHandler: @escaping () -> Void) {
+    public func present(script: DiagramScript) async {
         print(script.text)
-        completionHandler()
     }
 }

@@ -65,13 +65,13 @@ struct ClassDiagramGeneratorTests {
     @Test("generateScript from swift file contains parsed content")
     func generateScriptFromFile() {
         let swiftFile = projectMockURL.appendingPathComponent("Level 0.swift")
-        let script = generator.generateScript(for: [swiftFile])
+        let script = generator.generateScript(for: [swiftFile.path])
         #expect(script.text.hasPrefix("@startuml"))
     }
 
     @Test("generateScript from empty files list produces minimal script")
     func generateScriptFromEmptyFiles() {
-        let script = generator.generateScript(for: [])
+        let script = generator.generateScript(for: [String]())
         #expect(script.text.hasPrefix("@startuml"))
         #expect(script.text.hasSuffix("@enduml"))
     }
@@ -79,17 +79,17 @@ struct ClassDiagramGeneratorTests {
     // MARK: - generate (end-to-end with ConsolePresenter)
 
     @Test("generate from string with ConsolePresenter completes without error")
-    func generateFromStringWithConsolePresenter() {
+    func generateFromStringWithConsolePresenter() async {
         let presenter = ConsolePresenter()
-        generator.generate(from: "class Foo {}", with: .default, presentedBy: presenter)
+        await generator.generate(from: "class Foo {}", with: .default, presentedBy: presenter)
         // If we reach here, no crash occurred
         #expect(Bool(true))
     }
 
     @Test("generate from files with ConsolePresenter completes without error")
-    func generateFromFilesWithConsolePresenter() {
+    func generateFromFilesWithConsolePresenter() async {
         let presenter = ConsolePresenter()
-        generator.generate(for: [], with: .default, presentedBy: presenter)
+        await generator.generate(for: [String](), with: .default, presentedBy: presenter)
         #expect(Bool(true))
     }
 
@@ -100,24 +100,5 @@ struct ClassDiagramGeneratorTests {
         let start = Date().addingTimeInterval(-1.0)
         generator.logProcessingDuration(started: start)
         #expect(Bool(true))
-    }
-
-    // MARK: - outputDiagram
-
-    @Test("outputDiagram calls completion handler")
-    func outputDiagramCallsCompletion() {
-        var completed = false
-        let script = DiagramScript(items: [], configuration: .default)
-        let presenter = MockPresenter { completed = true }
-        generator.outputDiagram(for: script, with: presenter, processingStartDate: Date())
-        #expect(completed)
-    }
-}
-
-private struct MockPresenter: DiagramPresenting {
-    let onPresent: () -> Void
-    func present(script: DiagramScript, completionHandler: @escaping () -> Void) {
-        onPresent()
-        completionHandler()
     }
 }

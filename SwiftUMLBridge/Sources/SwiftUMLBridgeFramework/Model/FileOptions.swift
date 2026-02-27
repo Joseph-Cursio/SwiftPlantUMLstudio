@@ -1,7 +1,7 @@
 import Foundation
 
 /// Options which files shall be considered for class diagram generation
-public struct FileOptions: Codable {
+public struct FileOptions: Codable, Sendable {
     public init(include: [String]? = [], exclude: [String]? = []) {
         self.include = include
         self.exclude = exclude

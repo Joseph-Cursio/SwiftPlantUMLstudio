@@ -1,8 +1,8 @@
 import Foundation
 
 /// Built-in themes for PlantUML diagrams
-public enum Theme: Codable {
-    public static var preferred: [Theme] = [
+public enum Theme: Codable, Sendable {
+    public static let preferred: [Theme] = [
         .amiga, .carbonGray, .cloudscapeDesign, .mars, .minty,
         .plain, .reddressDarkblue, .sketchy, .sketchyOutline, .toy
     ]

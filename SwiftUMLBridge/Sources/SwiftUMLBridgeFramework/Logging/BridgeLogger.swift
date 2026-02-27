@@ -2,8 +2,8 @@ import Foundation
 import os.log
 
 /// Singleton logger for SwiftUMLBridge using os.Logger
-public final class BridgeLogger {
-    public static var shared: BridgeLogger = BridgeLogger()
+public final class BridgeLogger: @unchecked Sendable {
+    public static let shared: BridgeLogger = BridgeLogger()
 
     private let logger = Logger(subsystem: "name.JosephCursio.SwiftUMLBridge", category: "SwiftUMLBridge")
 

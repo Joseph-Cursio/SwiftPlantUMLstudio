@@ -3,8 +3,8 @@ import Foundation
 import SwiftUMLBridgeFramework
 
 extension SwiftUMLBridgeCLI {
-    struct ClassDiagramCommand: ParsableCommand {
-        static var configuration = CommandConfiguration(
+    struct ClassDiagramCommand: AsyncParsableCommand {
+        static let configuration = CommandConfiguration(
             commandName: "classdiagram",
             abstract: "Generate PlantUML class diagram from Swift sources",
             helpNames: [.short, .long]
@@ -35,7 +35,7 @@ extension SwiftUMLBridgeCLI {
         @Argument(help: "Paths to Swift source files or directories")
         var paths = [String]()
 
-        mutating func run() {
+        mutating func run() async throws {
             var bridgeConfig = ConfigurationProvider().getConfiguration(for: self.config)
 
             if !exclude.isEmpty {
@@ -62,17 +62,17 @@ extension SwiftUMLBridgeCLI {
 
             switch output {
             case .browserImageOnly:
-                generator.generate(
+                await generator.generate(
                     for: files.map(\.path), with: bridgeConfig,
                     presentedBy: BrowserPresenter(format: .png), sdkPath: sdk
                 )
             case .consoleOnly:
-                generator.generate(
+                await generator.generate(
                     for: files.map(\.path), with: bridgeConfig,
                     presentedBy: ConsolePresenter(), sdkPath: sdk
                 )
             default:
-                generator.generate(
+                await generator.generate(
                     for: files.map(\.path), with: bridgeConfig,
                     presentedBy: BrowserPresenter(format: .default), sdkPath: sdk
                 )

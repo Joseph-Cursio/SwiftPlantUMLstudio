@@ -1,7 +1,7 @@
 import Foundation
 
 /// Options which relationships to show and how to style them in a class diagram
-public struct RelationshipOptions: Codable {
+public struct RelationshipOptions: Codable, Sendable {
     public init(
         inheritance: Relationship? = Relationship(label: "inherits"),
         realize: Relationship? = Relationship(label: "conforms to"),
@@ -18,7 +18,7 @@ public struct RelationshipOptions: Codable {
 }
 
 /// Relationship metadata on if/how to visualize them in a class diagram
-public struct Relationship: Codable {
+public struct Relationship: Codable, Sendable {
     public init(label: String? = nil, style: RelationshipStyle? = nil, exclude: [String]? = nil) {
         self.label = label
         self.style = style

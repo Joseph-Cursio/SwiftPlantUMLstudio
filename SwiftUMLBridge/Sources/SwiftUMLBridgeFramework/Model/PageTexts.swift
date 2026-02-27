@@ -1,7 +1,7 @@
 import Foundation
 
 /// Descriptive texts you can add around your diagram
-public struct PageTexts: Codable {
+public struct PageTexts: Codable, Sendable {
     internal init(
         header: String? = nil,
         title: String? = nil,

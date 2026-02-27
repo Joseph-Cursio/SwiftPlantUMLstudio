@@ -1,7 +1,7 @@
 import Foundation
 
 /// Swift type representing a PlantUML script (@startuml ... @enduml)
-public struct DiagramScript {
+public struct DiagramScript: @unchecked Sendable {
     /// Textual representation of the script
     public private(set) var text: String = ""
 

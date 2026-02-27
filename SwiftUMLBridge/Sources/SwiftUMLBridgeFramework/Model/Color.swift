@@ -1,7 +1,7 @@
 import Foundation
 
 /// Colors supported by PlantUML (HTML color names, matched case-insensitively by PlantUML)
-public enum Color: String, CaseIterable, Codable {
+public enum Color: String, CaseIterable, Codable, Sendable {
     case aliceBlue, antiqueWhite, aqua, aquamarine, azure, beige, bisque, black
     case blanchedAlmond, blue, blueViolet, brown, burlyWood, cadetBlue, chartreuse, chocolate
     case coral, cornflowerBlue, cornsilk, crimson, cyan, darkBlue, darkCyan, darkGoldenRod

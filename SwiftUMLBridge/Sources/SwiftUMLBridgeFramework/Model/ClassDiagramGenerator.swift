@@ -12,11 +12,12 @@ public struct ClassDiagramGenerator {
         with configuration: Configuration = .default,
         presentedBy presenter: DiagramPresenting = BrowserPresenter(),
         sdkPath: String? = nil
-    ) {
+    ) async {
         let startDate = Date()
         let files = fileCollector.getFiles(for: paths)
         let script = generateScript(for: files, with: configuration, sdkPath: sdkPath)
-        outputDiagram(for: script, with: presenter, processingStartDate: startDate)
+        logProcessingDuration(started: startDate)
+        await presenter.present(script: script)
     }
 
     /// Generate diagram from Swift source string
@@ -24,13 +25,11 @@ public struct ClassDiagramGenerator {
         from content: String,
         with configuration: Configuration = .default,
         presentedBy presenter: DiagramPresenting = BrowserPresenter()
-    ) {
+    ) async {
         let startDate = Date()
-        outputDiagram(
-            for: generateScript(for: content, with: configuration),
-            with: presenter,
-            processingStartDate: startDate
-        )
+        let script = generateScript(for: content, with: configuration)
+        logProcessingDuration(started: startDate)
+        await presenter.present(script: script)
     }
 
     func generateScript(for content: String, with configuration: Configuration = .default) -> DiagramScript {
@@ -55,13 +54,14 @@ public struct ClassDiagramGenerator {
         return DiagramScript(items: allValidItems, configuration: configuration)
     }
 
-    func outputDiagram(for script: DiagramScript, with presenter: DiagramPresenting, processingStartDate date: Date) {
-        logProcessingDuration(started: date)
-        let semaphore = DispatchSemaphore(value: 0)
-        presenter.present(script: script) {
-            semaphore.signal()
-        }
-        semaphore.wait()
+    /// Generate a DiagramScript from paths — synchronous entry point for GUI integration.
+    public func generateScript(
+        for paths: [String],
+        with configuration: Configuration = .default,
+        sdkPath: String? = nil
+    ) -> DiagramScript {
+        let files = fileCollector.getFiles(for: paths)
+        return generateScript(for: files, with: configuration, sdkPath: sdkPath)
     }
 
     func logProcessingDuration(started processingStartDate: Date) {

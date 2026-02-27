@@ -1,7 +1,7 @@
 import Foundation
 
 /// Inline style for a relation (linking or arrow)
-public enum RelationshipInlineStyle: String, Codable {
+public enum RelationshipInlineStyle: String, Codable, Sendable {
     case bold
     case dashed
     case dotted
@@ -10,7 +10,7 @@ public enum RelationshipInlineStyle: String, Codable {
 }
 
 /// Style information for a relation and its label
-public struct RelationshipStyle: Codable {
+public struct RelationshipStyle: Codable, Sendable {
     public private(set) var lineStyle: RelationshipInlineStyle = .plain
     public private(set) var lineColor: Color = .black
     public private(set) var textColor: Color = .black

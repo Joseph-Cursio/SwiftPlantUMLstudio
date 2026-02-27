@@ -1,7 +1,7 @@
 import Foundation
 
 /// Access Level for Swift variables and methods
-public enum AccessLevel: String, Codable {
+public enum AccessLevel: String, Codable, Sendable {
     case open
     case `public`
     case `package`
@@ -11,7 +11,7 @@ public enum AccessLevel: String, Codable {
 }
 
 /// Configuration options to influence the generation and visual representation of the class diagram
-public struct Configuration: Codable {
+public struct Configuration: Codable, Sendable {
     public init(
         files: FileOptions = FileOptions(),
         elements: ElementOptions = ElementOptions(),

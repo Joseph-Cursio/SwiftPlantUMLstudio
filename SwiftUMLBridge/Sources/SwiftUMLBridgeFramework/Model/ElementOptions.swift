@@ -1,7 +1,7 @@
 import Foundation
 
 /// Options which and how elements shall be considered for class diagram generation
-public struct ElementOptions: Codable {
+public struct ElementOptions: Codable, Sendable {
     public private(set) var havingAccessLevel: [AccessLevel] = [.open, .public, .package, .internal, .private]
     public private(set) var showMembersWithAccessLevel: [AccessLevel] = [.open, .public, .package, .internal, .private]
     public private(set) var showNestedTypes: Bool = true

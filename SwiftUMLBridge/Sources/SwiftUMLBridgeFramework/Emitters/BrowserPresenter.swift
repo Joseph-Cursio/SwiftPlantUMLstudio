@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 
 /// Presentation formats supported to render PlantUML scripts in browser
-public enum BrowserPresentationFormat {
+public enum BrowserPresentationFormat: Sendable {
     case png
     case svg
     case `default`
@@ -16,7 +16,7 @@ public struct BrowserPresenter: DiagramPresenting {
         self.format = format
     }
 
-    public func present(script: DiagramScript, completionHandler: @escaping () -> Void) {
+    public func present(script: DiagramScript) async {
         let encodedText = script.encodeText()
         let url: URL
         switch format {
@@ -27,7 +27,6 @@ public struct BrowserPresenter: DiagramPresenting {
         default:
             url = URL(string: "https://www.planttext.com/?text=\(encodedText)")!
         }
-        NSWorkspace.shared.open(url)
-        completionHandler()
+        _ = await MainActor.run { NSWorkspace.shared.open(url) }
     }
 }
