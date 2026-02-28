@@ -63,7 +63,7 @@ extension SyntaxStructure {
         if !membersText.isEmpty {
             body += membersText
         }
-        return "class \(alias)[\"\(displayName!)\"] {\n\(body)\n}"
+        return "class \(alias)[\"\(displayName ?? name ?? "unknown")\"] {\n\(body)\n}"
     }
 
     private func mermaidMembers(context: DiagramContext) -> String {
@@ -94,9 +94,9 @@ extension SyntaxStructure {
             actualElement = element
         }
 
-        if kind! != .extension {
+        if kind != .extension {
             let generateMembersWithAccessLevel: [ElementAccessibility] = context.configuration.elements
-                .showMembersWithAccessLevel.map { ElementAccessibility(orig: $0)! }
+                .showMembersWithAccessLevel.compactMap { ElementAccessibility(orig: $0) }
             let effectiveAccessibility = actualElement.accessibility ?? ElementAccessibility.internal
             if generateMembersWithAccessLevel.contains(effectiveAccessibility) == false {
                 return nil
@@ -110,24 +110,24 @@ extension SyntaxStructure {
     }
 
     private func mermaidMemberName(of element: SyntaxStructure) -> String {
-        let kind = element.kind!
+        guard let kind = element.kind, let name = element.name else { return "" }
         switch kind {
         case .functionMethodInstance:
-            return "\(element.name!)()"
+            return "\(name)()"
         case .functionMethodStatic:
-            return "\(element.name!)()$"
+            return "\(name)()$"
         case .varInstance:
             if let typename = element.typename {
-                return "\(typename) \(element.name!)"
+                return "\(typename) \(name)"
             }
-            return "\(element.name!)"
+            return "\(name)"
         case .varStatic:
             if let typename = element.typename {
-                return "\(typename) \(element.name!)$"
+                return "\(typename) \(name)$"
             }
-            return "\(element.name!)$"
+            return "\(name)$"
         case .enumelement:
-            return "\(element.name!)"
+            return "\(name)"
         default:
             return ""
         }

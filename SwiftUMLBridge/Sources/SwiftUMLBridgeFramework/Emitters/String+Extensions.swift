@@ -15,7 +15,7 @@ internal extension String {
         do {
             let regex = try NSRegularExpression(pattern: "\\<.*\\>")
             let results = regex.matches(in: self, range: NSRange(startIndex..., in: self))
-            let result = results.map { String(self[Range($0.range, in: self)!]) }
+            let result = results.compactMap { Range($0.range, in: self).map { String(self[$0]) } }
             return result.first
         } catch {
             print("invalid regex: \(error.localizedDescription)")

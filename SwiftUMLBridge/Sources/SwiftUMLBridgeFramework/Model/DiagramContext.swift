@@ -35,16 +35,17 @@ class DiagramContext {
             element: parent,
             basedOn: configuration.relationships.inheritance?.exclude
         ) == false else { return }
+        guard let fullName = item.fullName else { return }
         let namedConnection = (uniqElementAndTypes[linkTo] != nil)
             ? "\(uniqElementAndTypes[linkTo] ?? "--ERROR--")"
             : "inherits"
-        var linkTypeKey = item.fullName! + "LinkType"
+        var linkTypeKey = fullName + "LinkType"
 
         if uniqElementAndTypes[linkTo] == "conforms to" {
             linkTypeKey = linkTo + "LinkType"
         }
 
-        var connect = "\(linkTo) \(uniqElementAndTypes[linkTypeKey] ?? "--ERROR--") \(item.fullName!)"
+        var connect = "\(linkTo) \(uniqElementAndTypes[linkTypeKey] ?? "--ERROR--") \(fullName)"
         if format == .plantuml, let relStyle = relationshipStyle(for: namedConnection)?.plantuml {
             connect += " \(relStyle)"
         }
@@ -123,7 +124,8 @@ class DiagramContext {
         guard format == .plantuml else { return }
         for item in items where item.parent != nil {
             guard let name = uniqueNameForElement[item],
-                  let parentName = uniqueNameForElement[item.parent!] ?? item.parent?.name
+                  let parent = item.parent,
+                  let parentName = uniqueNameForElement[parent] ?? parent.name
             else {
                 continue
             }

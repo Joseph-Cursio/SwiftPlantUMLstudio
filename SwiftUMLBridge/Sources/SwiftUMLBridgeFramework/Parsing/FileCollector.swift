@@ -92,7 +92,8 @@ public struct FileCollector {
                     do {
                         let resourceKeys: Set<URLResourceKey> = [.isRegularFileKey, .typeIdentifierKey]
                         let fileAttributes = try fileURL.resourceValues(forKeys: resourceKeys)
-                        if fileAttributes.isRegularFile!, fileAttributes.typeIdentifier == "public.swift-source" {
+                        let isSwift = fileAttributes.typeIdentifier == "public.swift-source"
+                        if fileAttributes.isRegularFile == true, isSwift {
                             files.append(fileURL)
                         }
                     } catch { print(error, fileURL) }

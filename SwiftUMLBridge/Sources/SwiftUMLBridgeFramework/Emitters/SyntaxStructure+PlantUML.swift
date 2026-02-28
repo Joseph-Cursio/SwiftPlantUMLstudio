@@ -77,12 +77,12 @@ extension SyntaxStructure {
         let alias = context.uniqName(item: self, relationship: relationship)
         let genericsStr = generics ?? ""
         let body = members(context: context)
-        return "class \"\(displayName!)\" as \(alias)\(genericsStr) \(stereotype) { \(body) \n}"
+        return "class \"\(displayName ?? name ?? "unknown")\" as \(alias)\(genericsStr) \(stereotype) { \(body) \n}"
     }
 
     func addLinking(context: DiagramContext) {
-        if inheritedTypes != nil, inheritedTypes!.count > 0 {
-            inheritedTypes!.forEach { parent in
+        if let inheritedTypes, !inheritedTypes.isEmpty {
+            inheritedTypes.forEach { parent in
                 if parent.name?.contains("&") == true {
                     parent.name?
                         .components(separatedBy: "&")
@@ -127,9 +127,9 @@ extension SyntaxStructure {
             actualElement = element
         }
 
-        if kind! != .extension {
+        if kind != .extension {
             let generateMembersWithAccessLevel: [ElementAccessibility] = context.configuration.elements
-                .showMembersWithAccessLevel.map { ElementAccessibility(orig: $0)! }
+                .showMembersWithAccessLevel.compactMap { ElementAccessibility(orig: $0) }
             let effectiveAccessibility = actualElement.accessibility ?? ElementAccessibility.internal
             if generateMembersWithAccessLevel.contains(effectiveAccessibility) == false {
                 return nil
@@ -150,33 +150,33 @@ extension SyntaxStructure {
     }
 
     private func memberName(of element: SyntaxStructure) -> String {
-        let kind = element.kind!
+        guard let kind = element.kind, let name = element.name else { return "" }
         switch kind {
         case .functionMethodInstance:
             // Detect async/throws from typename field (SourceKitten encodes these in return type)
             let typeName = element.typename ?? ""
             let asyncLabel = typeName.contains("async") ? " async" : ""
             let throwsLabel = typeName.contains("throws") ? " throws" : ""
-            return "\(element.name!)\(asyncLabel)\(throwsLabel)"
+            return "\(name)\(asyncLabel)\(throwsLabel)"
         case .functionMethodStatic:
             let typeName = element.typename ?? ""
             let asyncLabel = typeName.contains("async") ? " async" : ""
             let throwsLabel = typeName.contains("throws") ? " throws" : ""
-            return "{static} \(element.name!)\(asyncLabel)\(throwsLabel)"
+            return "{static} \(name)\(asyncLabel)\(throwsLabel)"
         case .varInstance:
-            if element.typename != nil {
-                return "\(element.name!) : \(element.typename!)"
+            if let typename = element.typename {
+                return "\(name) : \(typename)"
             } else {
-                return "\(element.name!)"
+                return "\(name)"
             }
         case .varStatic:
-            if element.typename != nil {
-                return "{static} \(element.name!) : \(element.typename!)"
+            if let typename = element.typename {
+                return "{static} \(name) : \(typename)"
             } else {
-                return "{static} \(element.name!)"
+                return "{static} \(name)"
             }
         case .enumelement:
-            return "\(element.name!)"
+            return "\(name)"
         default:
             return ""
         }
@@ -189,7 +189,7 @@ extension SyntaxStructure {
 
         if elementKind != .extension {
             let generateElementsWithAccessLevel: [ElementAccessibility] = configuration.elements
-                .havingAccessLevel.map { ElementAccessibility(orig: $0)! }
+                .havingAccessLevel.compactMap { ElementAccessibility(orig: $0) }
             let effectiveAccessibility = accessibility ?? ElementAccessibility.internal
             guard generateElementsWithAccessLevel.contains(effectiveAccessibility) else { return true }
         }
