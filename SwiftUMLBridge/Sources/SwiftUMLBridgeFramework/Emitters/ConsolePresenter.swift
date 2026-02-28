@@ -4,7 +4,7 @@ import Foundation
 public struct ConsolePresenter: DiagramPresenting {
     public init() {}
 
-    public func present(script: DiagramScript) async {
+    public func present(script: any DiagramOutputting) async {
         print(script.text)
     }
 }

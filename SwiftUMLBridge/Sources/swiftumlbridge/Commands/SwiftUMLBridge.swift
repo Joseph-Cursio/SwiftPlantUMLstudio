@@ -7,7 +7,7 @@ struct SwiftUMLBridgeCLI: AsyncParsableCommand {
         commandName: "swiftumlbridge",
         abstract: "Generate architectural diagrams from Swift source code",
         version: SwiftUMLBridgeFramework.Version.current.value,
-        subcommands: [ClassDiagramCommand.self],
+        subcommands: [ClassDiagramCommand.self, SequenceCommand.self],
         defaultSubcommand: ClassDiagramCommand.self
     )
 }

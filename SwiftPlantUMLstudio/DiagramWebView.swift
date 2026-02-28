@@ -12,7 +12,7 @@ import SwiftUMLBridgeFramework
 /// NSViewRepresentable wrapping WKWebView, rendering the diagram via planttext.com (PlantUML) or
 /// an embedded Mermaid.js page (Mermaid).
 struct DiagramWebView: NSViewRepresentable {
-    var script: DiagramScript?
+    var script: (any DiagramOutputting)?
 
     func makeNSView(context: Context) -> WKWebView {
         WKWebView()

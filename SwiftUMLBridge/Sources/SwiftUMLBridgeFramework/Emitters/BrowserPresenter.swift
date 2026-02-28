@@ -16,7 +16,7 @@ public struct BrowserPresenter: DiagramPresenting {
         self.format = format
     }
 
-    public func present(script: DiagramScript) async {
+    public func present(script: any DiagramOutputting) async {
         let url: URL
         switch script.format {
         case .plantuml:

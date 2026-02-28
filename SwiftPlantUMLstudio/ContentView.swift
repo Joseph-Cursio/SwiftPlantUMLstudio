@@ -15,19 +15,25 @@ struct ContentView: View {
 
     var body: some View {
         HSplitView {
-            // Left pane — raw PlantUML text
-            TextEditor(text: .constant(viewModel.script?.text ?? ""))
+            // Left pane — raw diagram text
+            TextEditor(text: .constant(viewModel.currentScript?.text ?? ""))
                 .font(.system(.body, design: .monospaced))
                 .disabled(true)
                 .frame(minWidth: 300)
 
-            // Right pane — SVG preview
+            // Right pane — preview
             Group {
                 if viewModel.isGenerating {
                     ProgressView("Generating…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.script != nil {
-                    DiagramWebView(script: viewModel.script)
+                } else if viewModel.currentScript != nil {
+                    DiagramWebView(script: viewModel.currentScript)
+                } else if viewModel.diagramMode == .sequenceDiagram && viewModel.entryPoint.isEmpty {
+                    Text("Enter an entry point (e.g. MyType.myMethod), then click Generate.")
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     Text("Select Swift source files or a folder, then click Generate.")
                         .foregroundStyle(.secondary)
@@ -54,12 +60,40 @@ struct ContentView: View {
             }
 
             ToolbarItem(placement: .primaryAction) {
+                Picker("Mode", selection: Bindable(viewModel).diagramMode) {
+                    ForEach(DiagramMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 240)
+            }
+
+            ToolbarItem(placement: .primaryAction) {
                 Picker("Format", selection: Bindable(viewModel).diagramFormat) {
                     Text("PlantUML").tag(DiagramFormat.plantuml)
                     Text("Mermaid").tag(DiagramFormat.mermaid)
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 160)
+            }
+
+            // Sequence-diagram-specific controls
+            if viewModel.diagramMode == .sequenceDiagram {
+                ToolbarItem(placement: .primaryAction) {
+                    TextField("Type.method", text: Bindable(viewModel).entryPoint)
+                        .frame(width: 160)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                ToolbarItem(placement: .primaryAction) {
+                    Stepper(
+                        "Depth: \(viewModel.sequenceDepth)",
+                        value: Bindable(viewModel).sequenceDepth,
+                        in: 1...10
+                    )
+                    .frame(width: 120)
+                }
             }
 
             ToolbarItem(placement: .primaryAction) {

@@ -3,6 +3,6 @@ import Foundation
 /// Unified interface for presenting a diagram script
 public protocol DiagramPresenting: Sendable {
     /// Present script/diagram to user
-    /// - Parameter script: in PlantUML notation
-    func present(script: DiagramScript) async
+    /// - Parameter script: any DiagramOutputting (PlantUML or Mermaid, class or sequence)
+    func present(script: any DiagramOutputting) async
 }
