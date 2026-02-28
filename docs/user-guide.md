@@ -1,9 +1,10 @@
 # SwiftUMLBridge User Guide
 
-SwiftUMLBridge is a command-line tool and Swift Package that generates architectural diagrams from Swift source code. It supports **PlantUML** and **Mermaid.js** output for two diagram types:
+SwiftUMLBridge is a command-line tool and Swift Package that generates architectural diagrams from Swift source code. It supports **PlantUML** and **Mermaid.js** output for three diagram types:
 
 - **Class diagrams** — structural overview of types, members, and relationships (M0–M2)
 - **Sequence diagrams** — static call-graph traces from a named entry-point method (M3)
+- **Dependency graphs** — directed graphs of type-level or module-level dependencies (M4)
 
 ---
 
@@ -24,17 +25,23 @@ SwiftUMLBridge is a command-line tool and Swift Package that generates architect
    - [How Calls Are Resolved](#how-calls-are-resolved)
    - [Async Calls](#async-calls)
    - [Unresolved Calls](#unresolved-calls)
-6. [Configuration File](#configuration-file)
+6. [Generating Dependency Graphs](#generating-dependency-graphs)
+   - [Types Mode](#types-mode)
+   - [Modules Mode](#modules-mode)
+   - [Filtering and Exclusion](#filtering-and-exclusion)
+   - [Cycle Detection](#cycle-detection)
+   - [Format and Output](#format-and-output)
+7. [Configuration File](#configuration-file)
    - [File Discovery](#file-discovery)
    - [Overriding Defaults](#overriding-defaults)
-7. [Output Destinations](#output-destinations)
-8. [Understanding Class Diagrams](#understanding-class-diagrams)
+8. [Output Destinations](#output-destinations)
+9. [Understanding Class Diagrams](#understanding-class-diagrams)
    - [Element Types](#element-types)
    - [Relationships](#relationships)
    - [Access Level Indicators](#access-level-indicators)
    - [Format Differences](#format-differences)
-9. [Known Limitations](#known-limitations)
-10. [Getting Help](#getting-help)
+10. [Known Limitations](#known-limitations)
+11. [Getting Help](#getting-help)
 
 ---
 
@@ -100,6 +107,18 @@ swiftumlbridge sequence Sources/ --entry MyService.process
 ```bash
 swiftumlbridge sequence Sources/ --entry MyService.process \
   --format mermaid --output consoleOnly
+```
+
+**Dependency graph — type-level (inheritance and conformance):**
+
+```bash
+swiftumlbridge deps Sources/
+```
+
+**Dependency graph — module-level (import statements):**
+
+```bash
+swiftumlbridge deps Sources/ --modules
 ```
 
 ---
@@ -312,9 +331,140 @@ This keeps the diagram honest about what is and is not known statically.
 
 ---
 
+## Generating Dependency Graphs
+
+The `deps` subcommand builds a directed dependency graph from Swift source files. Unlike `classdiagram` and `sequence`, it does not require an entry point — it scans all the source files you provide and reports relationships between types or between modules.
+
+```
+swiftumlbridge deps [<paths>...] [--modules] [--types] [--public-only] [--exclude <pattern>...] [--format <format>] [--output <output>] [--config <path>]
+```
+
+### Types Mode
+
+Types mode is the default. It extracts inheritance and protocol conformance edges from the SourceKitten-parsed `SyntaxStructure.inheritedTypes` field of each declaration:
+
+- `class` declarations produce `.inherits` edges (solid arrows).
+- `struct`, `enum`, `actor`, and `protocol` declarations produce `.conforms` edges (dashed arrows).
+
+```bash
+# Type-level dependency graph, opened in browser
+swiftumlbridge deps Sources/
+
+# Explicit flag (equivalent to the default)
+swiftumlbridge deps Sources/ --types
+```
+
+**PlantUML output example:**
+
+```
+@startuml
+Dog --> Animal : inherits
+Report --> Printable : conforms
+@enduml
+```
+
+**Mermaid output example:**
+
+```
+graph TD
+    Animal["Animal"]
+    Dog["Dog"]
+    Printable["Printable"]
+    Report["Report"]
+
+    Dog --> Animal
+    Report --> Printable
+```
+
+### Modules Mode
+
+`--modules` switches to an import-based graph. SwiftSyntax scans each source file for `import` statements and records an edge from the importing module to the imported module. The module name of each source file is derived from the name of its immediate parent directory.
+
+```bash
+# Module-level dependency graph
+swiftumlbridge deps Sources/ --modules
+
+# Module graph, printed to stdout
+swiftumlbridge deps Sources/ --modules --output consoleOnly
+```
+
+When `--modules` is specified, `--public-only` has no effect (import statements have no access level).
+
+### Filtering and Exclusion
+
+**`--public-only`** (types mode only) restricts the graph to `open` and `public` declarations. `internal`, `package`, `private`, and `fileprivate` types are omitted.
+
+```bash
+# Show only public API dependencies
+swiftumlbridge deps Sources/ --public-only
+```
+
+**`--exclude`** skips type names (in types mode) or module names (in modules mode) that match the given pattern. The flag can be repeated, and pattern matching follows the same glob rules as `elements.exclude` in the configuration file.
+
+```bash
+# Exclude generated code from the graph
+swiftumlbridge deps Sources/ --exclude "Generated*"
+
+# Exclude multiple patterns
+swiftumlbridge deps Sources/ --exclude "Generated*" --exclude "Stub*"
+
+# Exclude a specific module from the module graph
+swiftumlbridge deps Sources/ --modules --exclude "Foundation"
+```
+
+### Cycle Detection
+
+Both modes automatically detect cycles in the dependency graph. When a cycle is found, all nodes that participate in the cycle are annotated in the output so you can identify and break the circular dependency.
+
+**PlantUML — cycle annotation:**
+
+```
+@startuml
+ModA --> ModB : imports
+ModB --> ModA : imports
+
+note as CyclicDependencies
+  Cyclic nodes: ModA, ModB
+end note
+@enduml
+```
+
+**Mermaid — cycle annotation:**
+
+```
+graph TD
+    ModA --> ModB
+    ModB --> ModA
+
+    style ModA fill:#ffcccc,stroke:#cc0000
+    style ModB fill:#ffcccc,stroke:#cc0000
+```
+
+In PlantUML output, cyclic nodes are listed in a `note` block at the bottom of the diagram. In Mermaid output, each cyclic node is highlighted with a red background using an inline `style` directive.
+
+### Format and Output
+
+The `--format` and `--output` flags work identically to the other subcommands.
+
+```bash
+# Mermaid format, opened in browser
+swiftumlbridge deps Sources/ --format mermaid
+
+# PlantUML, raw markup to stdout
+swiftumlbridge deps Sources/ --output consoleOnly > deps.puml
+
+# Mermaid module graph, raw markup to stdout
+swiftumlbridge deps Sources/ --modules --format mermaid --output consoleOnly > deps.mmd
+
+# Custom config file
+swiftumlbridge deps Sources/ --config ./configs/diagram.yml
+```
+
+---
+
 ## Configuration File
 
-For repeatable, project-specific settings, place a `.swiftumlbridge.yml` file in the root of your project. The `format` key applies to both `classdiagram` and `sequence`. All other keys are class-diagram–specific and are silently ignored by `sequence`.
+For repeatable, project-specific settings, place a `.swiftumlbridge.yml` file in the root of your project. The `format` key applies to `classdiagram`, `sequence`, and `deps`. All other keys are class-diagram–specific and are silently ignored by `sequence` and `deps`. For `deps`, only `format` and the `elements.havingAccessLevel` and `elements.exclude` keys have any effect; all other keys are ignored.
 
 **Minimal example:**
 
@@ -436,6 +586,12 @@ swiftumlbridge sequence Sources/ --entry MyService.run --output consoleOnly > se
 swiftumlbridge sequence Sources/ --entry MyService.run \
   --format mermaid --output consoleOnly > sequence.mmd
 
+# Save PlantUML type dependency graph
+swiftumlbridge deps Sources/ --output consoleOnly > deps.puml
+
+# Save Mermaid module dependency graph
+swiftumlbridge deps Sources/ --modules --format mermaid --output consoleOnly > deps.mmd
+
 # Render PlantUML locally if you have PlantUML installed
 swiftumlbridge classdiagram Sources/ --output consoleOnly | plantuml -pipe > diagram.png
 ```
@@ -517,6 +673,7 @@ swiftumlbridge --help
 # Subcommand help
 swiftumlbridge classdiagram --help
 swiftumlbridge sequence --help
+swiftumlbridge deps --help
 
 # Version
 swiftumlbridge --version

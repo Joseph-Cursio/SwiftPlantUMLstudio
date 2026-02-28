@@ -66,7 +66,7 @@ struct ContentView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 240)
+                .frame(width: 360)
             }
 
             ToolbarItem(placement: .primaryAction) {
@@ -93,6 +93,19 @@ struct ContentView: View {
                         in: 1...10
                     )
                     .frame(width: 120)
+                }
+            }
+
+            // Dependency-graph-specific controls
+            if viewModel.diagramMode == .dependencyGraph {
+                ToolbarItem(placement: .primaryAction) {
+                    Picker("Deps Mode", selection: Bindable(viewModel).depsMode) {
+                        ForEach(DepsMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 160)
                 }
             }
 

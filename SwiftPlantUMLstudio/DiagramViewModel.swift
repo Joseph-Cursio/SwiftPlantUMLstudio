@@ -11,6 +11,7 @@ import SwiftUMLBridgeFramework
 enum DiagramMode: String, CaseIterable, Identifiable {
     case classDiagram = "Class Diagram"
     case sequenceDiagram = "Sequence Diagram"
+    case dependencyGraph = "Dependency Graph"
     var id: String { rawValue }
 }
 
@@ -19,17 +20,20 @@ final class DiagramViewModel {
     var selectedPaths: [String] = []
     var script: DiagramScript?
     var sequenceScript: SequenceScript?
+    var depsScript: DepsScript?
     var isGenerating: Bool = false
     var errorMessage: String?
     var diagramFormat: DiagramFormat = .plantuml
     var diagramMode: DiagramMode = .classDiagram
     var entryPoint: String = ""
     var sequenceDepth: Int = 3
+    var depsMode: DepsMode = .types
 
     var currentScript: (any DiagramOutputting)? {
         switch diagramMode {
         case .classDiagram: return script
         case .sequenceDiagram: return sequenceScript
+        case .dependencyGraph: return depsScript
         }
     }
 
@@ -39,6 +43,8 @@ final class DiagramViewModel {
             generateClassDiagram()
         case .sequenceDiagram:
             generateSequenceDiagram()
+        case .dependencyGraph:
+            generateDependencyGraph()
         }
     }
 
@@ -57,6 +63,26 @@ final class DiagramViewModel {
                 return ClassDiagramGenerator().generateScript(for: paths, with: config)
             }.value
             script = result
+            isGenerating = false
+        }
+    }
+
+    private func generateDependencyGraph() {
+        guard !selectedPaths.isEmpty else { return }
+        isGenerating = true
+        errorMessage = nil
+        depsScript = nil
+
+        let paths = selectedPaths
+        let format = diagramFormat
+        let mode = depsMode
+        Task {
+            let result = await Task.detached(priority: .userInitiated) {
+                var config = Configuration.default
+                config.format = format
+                return DependencyGraphGenerator().generateScript(for: paths, mode: mode, with: config)
+            }.value
+            depsScript = result
             isGenerating = false
         }
     }

@@ -17,9 +17,13 @@ For CLI usage, see the [SwiftUMLBridge User Guide](user-guide.md).
 7. [Generating a Sequence Diagram](#generating-a-sequence-diagram)
    - [Entry Point Syntax](#entry-point-syntax)
    - [Traversal Depth](#traversal-depth)
-8. [Reading the Results](#reading-the-results)
-9. [Copying the Diagram Markup](#copying-the-diagram-markup)
-10. [Known Limitations](#known-limitations)
+8. [Generating a Dependency Graph](#generating-a-dependency-graph)
+   - [Types Mode](#types-mode)
+   - [Modules Mode](#modules-mode)
+   - [Cycle Annotation](#cycle-annotation)
+9. [Reading the Results](#reading-the-results)
+10. [Copying the Diagram Markup](#copying-the-diagram-markup)
+11. [Known Limitations](#known-limitations)
 
 ---
 
@@ -37,18 +41,19 @@ For CLI usage, see the [SwiftUMLBridge User Guide](user-guide.md).
 The app opens at 1100 × 700 points and is split into two panes.
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│  Toolbar                                                   │
-│  [Open…] [path label] [Class Diagram|Sequence Diagram]     │
-│           [PlantUML|Mermaid]  [Generate]                   │
-│  (sequence mode adds: [Type.method field] [Depth stepper]) │
-├──────────────────────┬─────────────────────────────────────┤
-│                      │                                     │
-│   Left pane          │   Right pane                        │
-│   Raw diagram text   │   Rendered diagram preview          │
-│   (read-only)        │   (web view)                        │
-│                      │                                     │
-└──────────────────────┴─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│  Toolbar                                                            │
+│  [Open…] [path label] [Class Diagram|Sequence Diagram|Dependency Graph] │
+│           [PlantUML|Mermaid]  [Generate]                            │
+│  (sequence mode adds:         [Type.method field] [Depth stepper])  │
+│  (dependency graph mode adds: [Types|Modules])                      │
+├──────────────────────┬──────────────────────────────────────────────┤
+│                      │                                              │
+│   Left pane          │   Right pane                                 │
+│   Raw diagram text   │   Rendered diagram preview                   │
+│   (read-only)        │   (web view)                                 │
+│                      │                                              │
+└──────────────────────┴──────────────────────────────────────────────┘
 ```
 
 **Left pane** — shows the raw PlantUML or Mermaid markup produced by the generator. Useful for copying into version control or a diagramming tool.
@@ -79,8 +84,9 @@ The **segmented control** in the toolbar selects the diagram type:
 |---|---|
 | **Class Diagram** | Structural overview of types, properties, methods, and relationships |
 | **Sequence Diagram** | Static call-graph trace from a named entry-point method |
+| **Dependency Graph** | Type-to-type or module-to-module dependency graph across the selected source |
 
-Switching modes clears the current diagram and resets the preview pane.
+Switching modes clears the current diagram and resets the preview pane. Sequence Diagram mode reveals an entry-point text field and a depth stepper; Dependency Graph mode reveals a **Types / Modules** picker.
 
 ---
 
@@ -149,6 +155,46 @@ Increase depth if you want to see deeper call chains; decrease it for a focused,
 
 ---
 
+## Generating a Dependency Graph
+
+1. Click **Open…** and select the Swift files or folder you want to analyze.
+2. Select **Dependency Graph** in the mode picker. A **Types / Modules** segmented picker appears in the toolbar.
+3. Choose **Types** or **Modules** (see below).
+4. Choose **PlantUML** or **Mermaid** in the format picker.
+5. Click **Generate**.
+
+No entry point is required. The generator scans all selected source files and builds the full dependency graph in a single pass.
+
+### Types Mode
+
+Types mode builds one directed edge for every inheritance and protocol-conformance relationship found in the selected source. Each node represents a named Swift type (class, struct, enum, protocol, or actor). Edge labels indicate the relationship kind:
+
+| Edge label | Source relationship |
+|---|---|
+| `inherits` | Class inheritance (`class Dog: Animal`) |
+| `conforms` | Protocol conformance (`struct User: Codable`) |
+
+Use Types mode to get a structural overview of how your types depend on one another — equivalent to a flattened class diagram focused on dependencies only, with no member detail.
+
+### Modules Mode
+
+Modules mode builds one directed edge for every `import` statement found in the selected source files. Each node represents a **module**, where the module name is derived from the parent directory of the file containing the import. This gives a directory-level view of inter-module dependencies without requiring a full build.
+
+| Edge label | Source relationship |
+|---|---|
+| `imports` | `import ModuleName` statement in source |
+
+Use Modules mode to detect unintended cross-module coupling or to understand the layering of your codebase at a high level.
+
+### Cycle Annotation
+
+When the generator detects a dependency cycle, the nodes involved are highlighted:
+
+- **Mermaid format** — cyclic nodes receive a red fill (`fill:#ffcccc, stroke:#cc0000`) applied via a `style` directive.
+- **PlantUML format** — a `note as CyclicDependencies` block is appended at the bottom of the diagram listing the names of the cyclic nodes.
+
+---
+
 ## Reading the Results
 
 ### Class Diagram
@@ -174,6 +220,23 @@ Participants are the types involved in the call chain. Each arrow is a call:
 | `->>` (PlantUML) / `-->>` (Mermaid) | `await`-prefixed (async) call |
 
 Calls that cannot be resolved statically (e.g., `dependency.doWork()` where `dependency` is a variable) appear as **notes** in the diagram rather than arrows.
+
+### Dependency Graph
+
+Each node is a type name (Types mode) or a directory/module name (Modules mode). Edges are directed from the dependent toward the dependency.
+
+| Edge label | Meaning |
+|---|---|
+| `inherits` | Class inherits from another class (Types mode) |
+| `conforms` | Type conforms to a protocol (Types mode) |
+| `imports` | File in source module imports the target module (Modules mode) |
+
+Cyclic nodes — those involved in a dependency cycle — are annotated automatically:
+
+| Format | Annotation |
+|---|---|
+| **Mermaid** | Node background filled red (`fill:#ffcccc, stroke:#cc0000`) |
+| **PlantUML** | `note as CyclicDependencies` block listing affected node names |
 
 ---
 

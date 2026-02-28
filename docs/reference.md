@@ -10,6 +10,7 @@ Complete reference for all CLI options, YAML configuration fields, element kinds
    - [Root Command](#root-command)
    - [classdiagram](#classdiagram)
    - [sequence](#sequence)
+   - [deps](#deps)
 2. [Configuration File Schema](#configuration-file-schema)
    - [files](#files)
    - [elements](#elements)
@@ -24,6 +25,7 @@ Complete reference for all CLI options, YAML configuration fields, element kinds
 3. [Diagram Formats](#diagram-formats)
    - [Class Diagrams](#class-diagrams)
    - [Sequence Diagrams](#sequence-diagrams)
+   - [Dependency Graphs](#dependency-graphs)
 4. [Element Kinds](#element-kinds)
 5. [Access Levels](#access-levels)
 6. [Relationship Arrows](#relationship-arrows)
@@ -35,18 +37,25 @@ Complete reference for all CLI options, YAML configuration fields, element kinds
 12. [Framework API](#framework-api)
     - [ClassDiagramGenerator](#classdiagramgenerator)
     - [SequenceDiagramGenerator](#sequencediagramgenerator)
+    - [DependencyGraphGenerator](#dependencygraphgenerator)
     - [DiagramFormat](#diagramformat)
+    - [DepsMode](#depsmode)
     - [Configuration](#configuration)
     - [ConfigurationProvider](#configurationprovider)
     - [FileCollector](#filecollector)
     - [DiagramOutputting](#diagramoutputting)
     - [DiagramScript](#diagramscript)
     - [SequenceScript](#sequencescript)
+    - [DepsScript](#depsscript)
     - [DiagramPresenting](#diagrampresenting)
     - [BrowserPresenter](#browserpresenter)
     - [ConsolePresenter](#consolepresenter)
     - [CallGraph](#callgraph)
     - [CallEdge](#calledge)
+    - [DependencyGraphModel](#dependencygraphmodel)
+    - [DependencyEdge](#dependencyedge)
+    - [DependencyEdgeKind](#dependencyedgekind)
+    - [ImportEdge](#importedge)
     - [BridgeLogger](#bridgelogger)
 13. [Version](#version)
 
@@ -190,6 +199,61 @@ swiftumlbridge sequence Sources/ --entry MyService.handle --depth 5
 
 # Multiple source directories
 swiftumlbridge sequence Sources/ Tests/ --entry AuthService.login
+```
+
+---
+
+### deps
+
+Generate a PlantUML or Mermaid dependency graph from Swift source files. Supports both type-level graphs (inheritance and conformance edges) and module-level graphs (import statement edges).
+
+```
+swiftumlbridge deps [<paths>...] [--modules] [--types] [--public-only] [--exclude <pattern>...] [--format <format>] [--output <output>] [--config <path>]
+```
+
+**Positional arguments:**
+
+| Argument | Type | Description |
+|---|---|---|
+| `<paths>...` | `[String]` | Paths to `.swift` files or directories. Defaults to the current directory. |
+
+**Flags:**
+
+| Flag | Type | Description |
+|---|---|---|
+| `--modules` | `Bool` | Generate a module-level graph from import statements. Takes precedence over `--types` when both are set. |
+| `--types` | `Bool` | Generate a type-level graph from inheritance and conformance relationships. This is the default when neither flag is set. |
+| `--public-only` | `Bool` | Include only `open` and `public` types. Types mode only; has no effect in modules mode. |
+
+**Options:**
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--exclude <pattern>...` | `[String]` | `[]` | Exclude type or module names matching these glob patterns. May be specified multiple times. |
+| `--format <format>` | `DiagramFormat?` | `plantuml` | Diagram language. One of: `plantuml`, `mermaid`. |
+| `--output <format>` | `ClassDiagramOutput?` | `browser` | Output destination. One of: `browser`, `browserImageOnly`, `consoleOnly`. |
+| `--config <path>` | `String?` | `nil` | Path to a custom `.swiftumlbridge.yml` config file. |
+| `--help` | Flag | — | Print subcommand help and exit. |
+
+**Config file usage:** Only `format`, `elements.havingAccessLevel`, and `elements.exclude` are read from the config file. All other fields (relationships, themes, stereotypes, etc.) are ignored by the `deps` subcommand.
+
+**Examples:**
+
+```bash
+# Type-level dependency graph, PlantUML, open in browser
+swiftumlbridge deps Sources/
+
+# Module-level graph, Mermaid, print to stdout
+swiftumlbridge deps Sources/ --modules --format mermaid --output consoleOnly
+
+# Public types only, print to stdout
+swiftumlbridge deps Sources/ --public-only --output consoleOnly
+
+# Exclude standard library modules from a module-level graph
+swiftumlbridge deps Sources/ --modules --exclude Foundation --exclude Swift
+
+# Type-level graph excluding generated types
+swiftumlbridge deps Sources/ --exclude "Generated*" --format mermaid
 ```
 
 ---
@@ -518,6 +582,62 @@ The sequence extractor uses SwiftSyntax to walk function bodies. Only statically
 - **No dynamic dispatch resolution.** Protocol method calls through an existential are treated as same-type calls.
 - **Entry point must exist.** If no functions match `Type.method` in the parsed sources, `SequenceScript.empty` is returned and the diagram is blank.
 - **Depth applies per unique caller.** Each `Type.method` pair is visited at most once, regardless of depth.
+
+---
+
+### Dependency Graphs
+
+Dependency graphs visualize how types or modules depend on one another. The `deps` subcommand produces one of two graph kinds depending on the mode flag:
+
+- **Types mode** (default): edges represent inheritance (`inherits`) and protocol conformance (`conforms`).
+- **Modules mode** (`--modules`): edges represent import statements (`imports`), with the source module name derived from the parent directory of each source file.
+
+Both PlantUML and Mermaid output are supported.
+
+#### PlantUML dependency graph format
+
+**Script structure:**
+
+```
+@startuml
+Dog --> Animal : inherits
+Report --> Printable : conforms
+App --> Foundation : imports
+
+note as CyclicDependencies
+  Cyclic nodes: ModA, ModB
+end note
+@enduml
+```
+
+- Each edge is rendered as `From --> To : kind`, where `kind` is one of `inherits`, `conforms`, or `imports`.
+- Cyclic nodes are detected via DFS and listed together in a `note as CyclicDependencies` block at the end of the script. The note is omitted when no cycles are detected.
+- Browser output uses the same ZLIB deflate + custom base64 encoding as class and sequence diagrams, opened at planttext.com.
+
+#### Mermaid dependency graph format
+
+**Script structure:**
+
+```
+graph TD
+    Animal["Animal"]
+    Dog["Dog"]
+    Printable["Printable"]
+    Report["Report"]
+
+    Dog --> Animal
+    Report --> Printable
+
+    style ModA fill:#ffcccc,stroke:#cc0000
+    style ModB fill:#ffcccc,stroke:#cc0000
+```
+
+- Header is `graph TD`.
+- Each unique node is declared as `SafeId["DisplayName"]`, with nodes sorted alphabetically.
+- Edges are rendered as `FromId --> ToId` with no label (Mermaid flowchart graphs do not support per-edge labels in the same way PlantUML does).
+- Cyclic nodes receive a `style SafeId fill:#ffcccc,stroke:#cc0000` line (red fill and border). Style lines are omitted when no cycles are detected.
+- Node IDs are sanitized: spaces, dots, angle brackets, and hyphens are replaced with underscores to produce valid Mermaid identifiers.
+- Browser output uses the same base64 JSON encoding as Mermaid class and sequence diagrams, opened at mermaid.live.
 
 ---
 
@@ -894,6 +1014,65 @@ When no matching entry point is found, returns `SequenceScript.empty` (blank dia
 
 ---
 
+### DependencyGraphGenerator
+
+```swift
+public struct DependencyGraphGenerator
+```
+
+Top-level orchestrator for dependency graphs. Stateless — produces a `DepsScript` from source paths and a mode.
+
+**Methods:**
+
+```swift
+public init()
+
+public func generateScript(
+    for paths: [String],
+    mode: DepsMode,
+    with configuration: Configuration = .default
+) -> DepsScript
+```
+
+**Types mode behavior:** Uses `FileCollector` and `SyntaxStructure.create()` to parse Swift declarations. Applies `configuration.elements.havingAccessLevel` and `configuration.elements.exclude` filters. Class elements produce `.inherits` edges; struct, enum, actor, and protocol elements produce `.conforms` edges. Compound conformance annotations such as `A & B` are split into individual edges.
+
+**Modules mode behavior:** Reads each file as a plain string and runs `ImportExtractor`. The source module name is the last path component of the file's parent directory. Access-level and exclude filters do not apply in modules mode.
+
+**Example:**
+
+```swift
+import SwiftUMLBridgeFramework
+
+var config = Configuration.default
+config.format = .mermaid
+
+let script = DependencyGraphGenerator().generateScript(
+    for: ["Sources/"],
+    mode: .types,
+    with: config
+)
+print(script.text)
+```
+
+---
+
+### DepsMode
+
+```swift
+public enum DepsMode: String, CaseIterable, Sendable
+```
+
+Controls whether `DependencyGraphGenerator` builds a type-level or module-level graph.
+
+| Case | Raw value | Description |
+|---|---|---|
+| `.types` | `"Types"` | Type-level graph: inheritance and conformance edges derived from Swift declarations. |
+| `.modules` | `"Modules"` | Module-level graph: import edges derived from `import` statements in each file. |
+
+Pass to `DependencyGraphGenerator.generateScript(for:mode:with:)` or select via the `--modules` / `--types` CLI flags.
+
+---
+
 ### DiagramFormat
 
 ```swift
@@ -1006,7 +1185,7 @@ func getFiles(for url: URL) -> [URL]
 public protocol DiagramOutputting: Sendable
 ```
 
-The shared protocol for all diagram output types. Both `DiagramScript` (class diagrams) and `SequenceScript` (sequence diagrams) conform to this protocol. Use it when your code needs to handle either diagram type without specializing.
+The shared protocol for all diagram output types. `DiagramScript` (class diagrams), `SequenceScript` (sequence diagrams), and `DepsScript` (dependency graphs) all conform to this protocol. Use it when your code needs to handle any diagram type without specializing.
 
 ```swift
 var text: String { get }          // The raw diagram markup
@@ -1114,13 +1293,58 @@ Note right of Database: Unresolved: completion()
 
 ---
 
+### DepsScript
+
+```swift
+public struct DepsScript: Sendable, DiagramOutputting
+```
+
+Holds a rendered dependency graph. Produced by `DependencyGraphGenerator`. Conforms to `DiagramOutputting` and can be passed directly to any presenter.
+
+```swift
+var text: String          // The dependency graph markup
+var format: DiagramFormat // .plantuml or .mermaid
+func encodeText() -> String  // Same ZLIB + custom base64 encoding as DiagramScript
+```
+
+**PlantUML output sample:**
+
+```
+@startuml
+Dog --> Animal : inherits
+Report --> Printable : conforms
+
+note as CyclicDependencies
+  Cyclic nodes: ModA, ModB
+end note
+@enduml
+```
+
+**Mermaid output sample:**
+
+```
+graph TD
+    Animal["Animal"]
+    Dog["Dog"]
+    Printable["Printable"]
+    Report["Report"]
+
+    Dog --> Animal
+    Report --> Printable
+
+    style ModA fill:#ffcccc,stroke:#cc0000
+    style ModB fill:#ffcccc,stroke:#cc0000
+```
+
+---
+
 ### DiagramPresenting
 
 ```swift
 public protocol DiagramPresenting: Sendable
 ```
 
-Implement this protocol to create a custom output target. The `present(script:)` method accepts any `DiagramOutputting` value — both `DiagramScript` and `SequenceScript` conform.
+Implement this protocol to create a custom output target. The `present(script:)` method accepts any `DiagramOutputting` value — `DiagramScript`, `SequenceScript`, and `DepsScript` all conform.
 
 ```swift
 func present(script: any DiagramOutputting) async
@@ -1213,6 +1437,77 @@ public let calleeType: String?    // Type of the callee; nil when unresolved
 public let calleeMethod: String   // Name of the called method
 public let isAsync: Bool          // true when the call is wrapped in `await`
 public let isUnresolved: Bool     // true when the callee type cannot be statically determined
+```
+
+---
+
+### DependencyGraphModel
+
+```swift
+public struct DependencyGraphModel: Sendable
+```
+
+An in-memory model of dependency edges, with built-in cycle detection. Produced internally by `DependencyGraphGenerator` and available for direct use when embedding the framework.
+
+```swift
+public let edges: [DependencyEdge]
+public init(edges: [DependencyEdge])
+
+// DFS cycle detection — returns all node names involved in at least one cycle.
+// Self-cycles (A → A) are detected. Nodes that merely feed into a cycle
+// but are not themselves part of one are not included.
+public func detectCycles() -> Set<String>
+```
+
+Cycle detection uses a gray/black DFS coloring scheme. A node is included in the result set when a back edge is found from it or through it.
+
+---
+
+### DependencyEdge
+
+```swift
+public struct DependencyEdge: Sendable, Hashable
+```
+
+A single directed dependency relationship between two named nodes.
+
+```swift
+public let from: String              // Dependent node name (the type or module that depends)
+public let to: String                // Depended-upon node name (the parent, conformance target, or imported module)
+public let kind: DependencyEdgeKind  // The nature of the dependency
+```
+
+---
+
+### DependencyEdgeKind
+
+```swift
+public enum DependencyEdgeKind: String, Sendable, CaseIterable
+```
+
+The kind of dependency represented by a `DependencyEdge`.
+
+| Case | Raw value | Produced by |
+|---|---|---|
+| `.inherits` | `"inherits"` | Class inheritance (`class Dog: Animal`) |
+| `.conforms` | `"conforms"` | Protocol conformance on struct, enum, actor, or protocol |
+| `.imports` | `"imports"` | An `import` statement in a source file (modules mode) |
+
+In PlantUML output, the raw value appears as the label on each edge arrow. In Mermaid output, no label is emitted.
+
+---
+
+### ImportEdge
+
+```swift
+public struct ImportEdge: Sendable, Hashable
+```
+
+A single module import relationship extracted from a Swift source file. Used internally by `DependencyGraphGenerator` in modules mode.
+
+```swift
+public let sourceModule: String    // Parent directory name of the source file (derived module name)
+public let importedModule: String  // Module name from the import statement
 ```
 
 ---

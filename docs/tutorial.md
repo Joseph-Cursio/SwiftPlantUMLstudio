@@ -1,6 +1,6 @@
 # SwiftUMLBridge Tutorial
 
-This tutorial walks you through generating both class diagrams and sequence diagrams from a real Swift project step by step. By the end you will have a working class diagram in both PlantUML and Mermaid formats, a configuration file tuned to your project, and a sequence diagram tracing calls from an entry-point method.
+This tutorial walks you through generating class diagrams, sequence diagrams, and dependency graphs from a real Swift project step by step. By the end you will have a working class diagram in both PlantUML and Mermaid formats, a configuration file tuned to your project, a sequence diagram tracing calls from an entry-point method, and a dependency graph showing how your types and modules relate.
 
 ---
 
@@ -11,6 +11,8 @@ You will generate diagrams from the SwiftUMLBridgeFramework source itself — a 
 **Part 1 (Steps 1–9):** A refined class diagram of the public API in both PlantUML and Mermaid.
 
 **Part 2 (Steps 10–12):** A sequence diagram tracing the call graph of `ClassDiagramGenerator.generateScript`.
+
+**Part 3 (Steps 13–16):** A dependency graph exploring type and module relationships across the framework.
 
 ---
 
@@ -443,8 +445,201 @@ swiftumlbridge sequence Sources/ \
 
 ---
 
+## Part 3 — Dependency Graphs
+
+Dependency graphs show directed edges between types (based on inheritance and conformance) or between modules (based on `import` statements). Unlike class diagrams — which show the full structural detail of each type — dependency graphs answer a simpler question: **what depends on what?**
+
+### Step 13 — Your First Type Dependency Graph
+
+Start with the default types mode to see how the framework's public types depend on each other.
+
+```bash
+cd /path/to/SwiftPlantUMLstudio/SwiftUMLBridge
+
+swiftumlbridge deps Sources/SwiftUMLBridgeFramework/ --output consoleOnly
+```
+
+The output is a PlantUML diagram listing one edge per line:
+
+```
+@startuml
+BrowserPresenter --> DiagramPresenting : conforms
+ClassDiagramGenerator --> ...
+Configuration --> ...
+...
+@enduml
+```
+
+Each line has the form `From --> To : kind` where `kind` is one of:
+
+| Kind | Meaning |
+|---|---|
+| `inherits` | Class inheritance (`class Dog: Animal`) |
+| `conforms` | Protocol conformance or protocol refinement |
+| `imports` | Module import (modules mode only) |
+
+Classes produce `inherits` edges. Structs, enums, actors, and protocols produce `conforms` edges. Open it in the browser to see the full graph:
+
+```bash
+swiftumlbridge deps Sources/SwiftUMLBridgeFramework/
+```
+
+> **Comparison with class diagrams:** A class diagram shows every member inside each type node. A dependency graph strips the internals away and shows only the relationships — useful for understanding the overall architecture at a glance.
+
+---
+
+### Step 14 — Focus on Public Types
+
+The framework contains internal types used only for parsing. Restrict the graph to the public API surface with `--public-only`:
+
+```bash
+swiftumlbridge deps Sources/SwiftUMLBridgeFramework/ \
+  --public-only --output consoleOnly
+```
+
+The output is noticeably shorter. Only `public` and `open` types appear as source nodes. You can combine `--public-only` with `--exclude` to further suppress well-known protocol conformances that add noise:
+
+```bash
+swiftumlbridge deps Sources/SwiftUMLBridgeFramework/ \
+  --public-only \
+  --exclude Codable \
+  --exclude Sendable \
+  --exclude Hashable \
+  --output consoleOnly
+```
+
+This leaves only the domain-level relationships — the same conformances you suppressed in the class diagram tutorial (Step 4), but applied to the simpler dependency graph representation.
+
+---
+
+### Step 15 — Switch to Mermaid and Spot Cycles
+
+Generate the same graph in Mermaid format. Mermaid dependency graphs use `graph TD` (top-down) layout instead of the PlantUML sequence:
+
+```bash
+swiftumlbridge deps Sources/SwiftUMLBridgeFramework/ \
+  --public-only \
+  --exclude Codable --exclude Sendable --exclude Hashable \
+  --format mermaid --output consoleOnly
+```
+
+The output starts with `graph TD`, followed by node declarations and edge lines:
+
+```
+graph TD
+    BrowserPresenter["BrowserPresenter"]
+    ClassDiagramGenerator["ClassDiagramGenerator"]
+    ...
+
+    BrowserPresenter --> DiagramPresenting
+    ClassDiagramGenerator --> ...
+```
+
+Open it in Mermaid Live:
+
+```bash
+swiftumlbridge deps Sources/SwiftUMLBridgeFramework/ \
+  --public-only \
+  --exclude Codable --exclude Sendable --exclude Hashable \
+  --format mermaid
+```
+
+**Cycle detection:** If any nodes form a dependency cycle, they are automatically highlighted in both formats:
+
+- **PlantUML:** A `note as CyclicDependencies` block lists the cycle node names at the bottom of the diagram.
+- **Mermaid:** Each cyclic node gets a `style` directive: `fill:#ffcccc,stroke:#cc0000` (red fill).
+
+The SwiftUMLBridgeFramework itself has no type-level cycles — well-structured Swift tends not to — so you won't see the highlight here. To trigger it artificially with the modules mode, see Step 16.
+
+---
+
+### Step 16 — Module-Level Graph with `--modules`
+
+Modules mode reads `import` statements from each source file and builds a graph where **nodes are directory names** (used as a proxy for module names) and **edges represent imports**. This reveals which parts of your codebase depend on which external frameworks.
+
+```bash
+swiftumlbridge deps Sources/SwiftUMLBridgeFramework/ \
+  --modules --output consoleOnly
+```
+
+You will see lines like:
+
+```
+@startuml
+Emitters --> Foundation : imports
+Model --> Foundation : imports
+Parsing --> Foundation : imports
+Parsing --> SwiftParser : imports
+Parsing --> SwiftSyntax : imports
+...
+@enduml
+```
+
+Each node is the name of the directory that contains the source file. Because the framework is organized into `Parsing/`, `Model/`, and `Emitters/` subdirectories, those become the three source nodes.
+
+Open the Mermaid version to see the graph visually:
+
+```bash
+swiftumlbridge deps Sources/SwiftUMLBridgeFramework/ \
+  --modules --format mermaid
+```
+
+You can filter out standard library imports you are not interested in:
+
+```bash
+swiftumlbridge deps Sources/SwiftUMLBridgeFramework/ \
+  --modules \
+  --exclude Foundation \
+  --exclude Swift \
+  --format mermaid --output consoleOnly
+```
+
+This leaves only the third-party and local dependencies — `SwiftSyntax`, `SwiftParser`, `SourceKittenFramework`, `Yams` — making it easy to see which layers of the framework pull in which external packages.
+
+**Save the module graph:**
+
+```bash
+swiftumlbridge deps Sources/SwiftUMLBridgeFramework/ \
+  --modules --format mermaid --output consoleOnly > docs/module-deps.mmd
+
+swiftumlbridge deps Sources/SwiftUMLBridgeFramework/ \
+  --modules --output consoleOnly > docs/module-deps.puml
+```
+
+---
+
+### Applying Dependency Graphs to Your Own Project
+
+A common workflow when joining a new codebase:
+
+1. **Run types mode first** to see the high-level type hierarchy without reading any code:
+   ```bash
+   swiftumlbridge deps Sources/ --public-only --output consoleOnly
+   ```
+
+2. **Run modules mode** to understand external dependencies:
+   ```bash
+   swiftumlbridge deps Sources/ --modules --format mermaid
+   ```
+
+3. **Watch for cycles.** If the cycle annotation appears, those types or modules have circular dependencies — a common signal of an architectural problem worth investigating.
+
+4. **Add `deps` to your Makefile** alongside `classdiagram` and `sequence` for automated diagram regeneration:
+   ```makefile
+   deps-types:
+       swiftumlbridge deps Sources/ --public-only \
+         --exclude Codable --exclude Sendable \
+         --output consoleOnly > docs/type-deps.puml
+
+   deps-modules:
+       swiftumlbridge deps Sources/ --modules \
+         --format mermaid --output consoleOnly > docs/module-deps.mmd
+   ```
+
+---
+
 ## What's Next
 
-- Read the [User Guide](user-guide.md) for full documentation of every flag and option, including the complete `sequence` subcommand reference.
-- Read the [Reference Guide](reference.md) for the complete YAML schema, all themes, all element kinds, relationship style options, sequence diagram format details, and the full framework API (`SequenceDiagramGenerator`, `CallGraph`, `CallEdge`, `DiagramOutputting`).
+- Read the [User Guide](user-guide.md) for full documentation of every flag and option, including the complete `deps`, `sequence`, and `classdiagram` subcommand references.
+- Read the [Reference Guide](reference.md) for the complete YAML schema, all themes, all element kinds, relationship style options, diagram format details, and the full framework API (`DependencyGraphGenerator`, `SequenceDiagramGenerator`, `CallGraph`, `CallEdge`, `DiagramOutputting`).
 - Check the [Known Limitations](user-guide.md#known-limitations) section for current constraints (actor stereotypes, class-diagram async/throws labeling, sequence diagram variable-receiver resolution).
