@@ -19,16 +19,19 @@ Complete reference for all CLI options, YAML configuration fields, element kinds
    - [relationships](#relationships)
    - [stereotypes](#stereotypes)
    - [texts](#texts)
-3. [Element Kinds](#element-kinds)
-4. [Access Levels](#access-levels)
-5. [Relationship Arrows](#relationship-arrows)
-6. [RelationshipStyle Properties](#relationshipstyle-properties)
-7. [Themes](#themes)
-8. [Colors](#colors)
-9. [Output Formats](#output-formats)
-10. [Glob Pattern Syntax](#glob-pattern-syntax)
-11. [Framework API](#framework-api)
+   - [format](#format)
+3. [Diagram Formats](#diagram-formats)
+4. [Element Kinds](#element-kinds)
+5. [Access Levels](#access-levels)
+6. [Relationship Arrows](#relationship-arrows)
+7. [RelationshipStyle Properties](#relationshipstyle-properties)
+8. [Themes](#themes)
+9. [Colors](#colors)
+10. [Output Destinations](#output-destinations)
+11. [Glob Pattern Syntax](#glob-pattern-syntax)
+12. [Framework API](#framework-api)
     - [ClassDiagramGenerator](#classdiagramgenerator)
+    - [DiagramFormat](#diagramformat)
     - [Configuration](#configuration)
     - [ConfigurationProvider](#configurationprovider)
     - [FileCollector](#filecollector)
@@ -37,7 +40,7 @@ Complete reference for all CLI options, YAML configuration fields, element kinds
     - [BrowserPresenter](#browserpresenter)
     - [ConsolePresenter](#consolepresenter)
     - [BridgeLogger](#bridgelogger)
-12. [Version](#version)
+13. [Version](#version)
 
 ---
 
@@ -60,7 +63,7 @@ The default subcommand is `classdiagram`. Running `swiftumlbridge` with no verb 
 
 ### classdiagram
 
-Generate a PlantUML class diagram from Swift source files.
+Generate a PlantUML or Mermaid class diagram from Swift source files.
 
 ```
 swiftumlbridge classdiagram [<paths>...] [options]
@@ -78,6 +81,7 @@ swiftumlbridge classdiagram [<paths>...] [options]
 |---|---|---|---|
 | `--config <path>` | `String?` | `nil` | Path to a custom `.swiftumlbridge.yml` file. When omitted, looks for `.swiftumlbridge.yml` in the current directory, then falls back to built-in defaults. |
 | `--exclude <path>...` | `[String]` | `[]` | File or directory paths to exclude. Takes precedence over positional path arguments. May be specified multiple times. |
+| `--format <format>` | `DiagramFormat?` | `plantuml` | Diagram language. One of: `plantuml`, `mermaid`. Overrides the `format` field in the config file. |
 | `--output <format>` | `ClassDiagramOutput?` | `browser` | Output destination. One of: `browser`, `browserImageOnly`, `consoleOnly`. |
 | `--sdk <path>` | `String?` | `nil` | macOS SDK path for improved type inference. Typically `$(xcrun --show-sdk-path -sdk macosx)`. |
 | `--show-extensions` | Flag | — | Show all extensions as separate nodes (overrides config file). |
@@ -91,8 +95,14 @@ swiftumlbridge classdiagram [<paths>...] [options]
 **Examples:**
 
 ```bash
-# Diagram all Swift files in Sources/, open in browser
+# Diagram all Swift files in Sources/, open in browser (PlantUML, default)
 swiftumlbridge classdiagram Sources/
+
+# Generate Mermaid output and open in Mermaid Live editor
+swiftumlbridge classdiagram Sources/ --format mermaid
+
+# Print Mermaid markup to stdout
+swiftumlbridge classdiagram Sources/ --format mermaid --output consoleOnly
 
 # Use a custom config, write PlantUML to stdout
 swiftumlbridge classdiagram Sources/ --config ./docs/diagram.yml --output consoleOnly
@@ -154,7 +164,7 @@ elements:
 
   showNestedTypes: true
     # When true, nested type declarations are shown as child nodes connected
-    # by composition arrows (+--).
+    # by composition arrows (+-- in PlantUML; skipped in Mermaid).
     # Type: Bool  Default: true
 
   showGenerics: true
@@ -185,6 +195,7 @@ elements:
 # ─── hideShowCommands ──────────────────────────────────────────────────────
 hideShowCommands:
   # Raw PlantUML 'hide' or 'show' directives inserted verbatim into the diagram.
+  # Ignored when format is 'mermaid'.
   # Type: [String]  Default: ["hide empty members"]
   - "hide empty members"
   - "hide @unlinked"
@@ -192,6 +203,7 @@ hideShowCommands:
 # ─── skinparamCommands ─────────────────────────────────────────────────────
 skinparamCommands:
   # Raw PlantUML 'skinparam' directives inserted verbatim into the diagram.
+  # Ignored when format is 'mermaid'.
   # Type: [String]  Default: ["skinparam shadowing false"]
   - "skinparam shadowing false"
   - "skinparam sequenceMessageAlign center"
@@ -199,6 +211,7 @@ skinparamCommands:
 # ─── includeRemoteURL ──────────────────────────────────────────────────────
 includeRemoteURL:
   # URL for a PlantUML '!include' directive. Useful for shared style libraries.
+  # Ignored when format is 'mermaid'.
   # Type: String?  Default: nil
   "https://raw.githubusercontent.com/example/styles/main/custom.iuml"
 
@@ -206,6 +219,7 @@ includeRemoteURL:
 theme: minty
   # PlantUML theme name. camelCase names are converted to kebab-case automatically.
   # Use __directive__("name") to pass a raw PlantUML theme directive as-is.
+  # Ignored when format is 'mermaid'.
   # Type: String?  Default: nil
   # See the Themes section for available values.
 
@@ -219,6 +233,7 @@ relationships:
       # Type: [String]  Default: []
       - "NSObject"
     style:
+      # Relationship style is applied to PlantUML output only; ignored for Mermaid.
       lineStyle: plain        # bold | dashed | dotted | hidden | plain
       lineColor: DarkGray     # HTML color name recognized by PlantUML
       textColor: DarkGray
@@ -244,6 +259,7 @@ relationships:
 
 # ─── stereotypes ───────────────────────────────────────────────────────────
 stereotypes:
+  # Spot characters and colors apply to PlantUML output only.
   class:
     name: "class"             # Display name shown after the spot character. Type: String?
     spot:
@@ -269,12 +285,85 @@ stereotypes:
 # ─── texts ─────────────────────────────────────────────────────────────────
 texts:
   # Page text sections added to the diagram. All fields are optional.
+  # PlantUML: rendered as header/title/legend/caption/footer blocks.
+  # Mermaid: title, header, and footer are rendered as %% comment lines.
+  #          legend and caption are not supported in Mermaid and are ignored.
   header: "CONFIDENTIAL"      # Top of every page
   title: "My Architecture"   # Diagram title
-  legend: "Legend text"       # Legend box
-  caption: "Fig. 1"          # Caption below the diagram
+  legend: "Legend text"       # Legend box (PlantUML only)
+  caption: "Fig. 1"          # Caption below the diagram (PlantUML only)
   footer: "Generated by swiftumlbridge"  # Bottom of every page
+
+# ─── format ────────────────────────────────────────────────────────────────
+format: plantuml
+  # Diagram language for the generated output.
+  # Type: plantuml | mermaid  Default: plantuml
+  # Can be overridden at runtime with the --format CLI flag.
 ```
+
+---
+
+## Diagram Formats
+
+SwiftUMLBridge supports two output diagram languages.
+
+### PlantUML (default)
+
+Set `format: plantuml` or pass `--format plantuml`. The generated script is wrapped in `@startuml` / `@enduml` and uses PlantUML class diagram syntax.
+
+**Browser output:** The script is encoded and opened at [planttext.com](https://www.planttext.com).
+
+**Script structure:**
+```
+@startuml
+[!theme <name>]
+[!include <url>]
+' STYLE START
+hide empty members
+skinparam shadowing false
+' STYLE END
+set namespaceSeparator none
+[header/title/legend/caption/footer blocks]
+[type nodes]
+[relationship arrows]
+@enduml
+```
+
+**PlantUML-specific features:** themes, skinparam commands, hide/show commands, remote include URL, custom spot stereotypes, relationship line styles/colors, nested type `+--` composition connections.
+
+### Mermaid
+
+Set `format: mermaid` or pass `--format mermaid`. The generated script starts with `classDiagram` and uses [Mermaid.js](https://mermaid.js.org) class diagram syntax.
+
+**Browser output:** The script is base64-encoded and opened at [mermaid.live](https://mermaid.live).
+
+**Script structure:**
+```
+classDiagram
+[%% title: ...]
+[%% header: ...]
+[%% footer: ...]
+[type nodes]
+[relationship arrows]
+```
+
+**Mermaid-specific notes:**
+- `hideShowCommands`, `skinparamCommands`, `includeRemoteURL`, `theme`, and `stereotypes` settings are ignored.
+- `texts.legend` and `texts.caption` are ignored (not supported by Mermaid classDiagram).
+- `texts.title`, `texts.header`, and `texts.footer` are emitted as `%% key: value` comment lines.
+- Nested type composition connections (`+--`) are omitted (not supported by Mermaid classDiagram).
+- Relationship line styles and colors are omitted (not supported by Mermaid classDiagram).
+- Member format: variables as `Type name`, methods as `name()`, static members with `$` classifier suffix.
+
+**Member syntax comparison:**
+
+| Member | PlantUML | Mermaid |
+|---|---|---|
+| Instance variable | `name : Type` | `Type name` |
+| Static variable | `{static} name : Type` | `Type name$` |
+| Instance method | `name()` | `name()` |
+| Static method | `{static} name()` | `name()$` |
+| Enum case | `name` | `name` |
 
 ---
 
@@ -296,12 +385,12 @@ SwiftUMLBridge recognizes these Swift declaration kinds:
 | `typealias` | `source.lang.swift.decl.typealias` | |
 | `associatedtype` | `source.lang.swift.decl.associatedtype` | |
 | `actor` | `source.lang.swift.decl.actor` | Parses as `.class` in SourceKit 6.3 (see Known Limitations) |
-| `macro` | `source.lang.swift.decl.macro` | Rendered as a PlantUML `note` block |
-| `varInstance` | `source.lang.swift.decl.var.instance` | Shown as `name : TypeName` |
-| `varStatic` | `source.lang.swift.decl.var.static` | Shown as `{static} name : TypeName` |
+| `macro` | `source.lang.swift.decl.macro` | PlantUML: `note` block; Mermaid: `%% macro:` comment |
+| `varInstance` | `source.lang.swift.decl.var.instance` | |
+| `varStatic` | `source.lang.swift.decl.var.static` | |
 | `varClass` | `source.lang.swift.decl.var.class` | |
 | `functionMethodInstance` | `source.lang.swift.decl.function.method.instance` | |
-| `functionMethodStatic` | `source.lang.swift.decl.function.method.static` | Shown as `{static} name()` |
+| `functionMethodStatic` | `source.lang.swift.decl.function.method.static` | |
 | `functionConstructor` | `source.lang.swift.decl.function.constructor` | |
 | `enumcase` | `source.lang.swift.decl.enumcase` | Container for enum elements |
 | `enumelement` | `source.lang.swift.decl.enumelement` | Individual case shown by name |
@@ -325,7 +414,7 @@ Access level values used in `havingAccessLevel` and `showMembersWithAccessLevel`
 | `fileprivate` | `fileprivate` | `-` |
 | `private` | `private` | `-` |
 
-The indicator prefix is applied when `showMemberAccessLevelAttribute: true`.
+The indicator prefix is applied when `showMemberAccessLevelAttribute: true`. The same `+`/`~`/`-` symbols are used in both PlantUML and Mermaid output.
 
 **Default access level filter:** All six levels are included by default. To show only public API:
 
@@ -340,21 +429,21 @@ elements:
 
 ## Relationship Arrows
 
-PlantUML arrow notation used in generated diagrams:
+Arrow notation used in generated diagrams. Both PlantUML and Mermaid use the same arrow strings for inheritance, conformance, and extension connections.
 
-| Arrow | PlantUML Syntax | Meaning |
+| Arrow | Syntax | Meaning |
 |---|---|---|
 | Inheritance | `Child <\|-- Parent` | `class Dog: Animal` |
 | Realization (conformance) | `Type <\|.. Protocol` | `struct Foo: Equatable` |
 | Extension dependency | `Extension <.. Type` | Extension on a named type |
-| Composition (nested) | `Outer +-- Inner` | Nested type declaration |
+| Composition (nested) | `Outer +-- Inner` | Nested type declaration **(PlantUML only)** |
 | Generic link | `A -- B` | Generic relationship |
 
 ---
 
 ## RelationshipStyle Properties
 
-Each of `relationships.inheritance`, `relationships.realize`, and `relationships.dependency` accepts an optional `style` block:
+Each of `relationships.inheritance`, `relationships.realize`, and `relationships.dependency` accepts an optional `style` block. Style properties apply to PlantUML output only and are ignored when `format: mermaid`.
 
 ### lineStyle
 
@@ -405,7 +494,7 @@ This emits: `#line:RoyalBlue;line.dashed;text:RoyalBlue` inline on the PlantUML 
 
 ## Themes
 
-Set a PlantUML built-in theme with the `theme` key. camelCase names are automatically converted to kebab-case (e.g., `carbonGray` → `carbon-gray`).
+Set a PlantUML built-in theme with the `theme` key. camelCase names are automatically converted to kebab-case (e.g., `carbonGray` → `carbon-gray`). This setting is ignored when `format: mermaid`.
 
 **Preferred themes (tested):**
 
@@ -471,23 +560,24 @@ PlantUML accepts any HTML 4 color name. A representative set:
 
 ---
 
-## Output Formats
+## Output Destinations
 
-Controlled by the `--output` CLI flag:
+Controlled by the `--output` CLI flag. Applies to both PlantUML and Mermaid formats.
 
-| Value | Description | URL Pattern |
+| Value | PlantUML behavior | Mermaid behavior |
 |---|---|---|
-| `browser` | Opens interactive PlantText editor | `https://www.planttext.com/?text=<encoded>` |
-| `browserImageOnly` | Opens a PNG render directly | `https://www.planttext.com/api/plantuml/png/<encoded>` |
-| `consoleOnly` | Prints raw PlantUML to stdout | — |
+| `browser` | Opens interactive planttext.com editor | Opens Mermaid Live editor (`mermaid.live`) |
+| `browserImageOnly` | Opens a PNG render at planttext.com | Same as `browser` for Mermaid |
+| `consoleOnly` | Prints raw PlantUML to stdout | Prints raw Mermaid to stdout |
 
-The encoded form uses ZLIB deflate followed by PlantUML's custom base64 alphabet (`0-9A-Za-z-_=`).
+**PlantUML encoding:** ZLIB deflate followed by PlantUML's custom base64 alphabet (`0-9A-Za-z-_=`).
 
-**Planned formats (future milestones):**
+**Mermaid encoding:** The script text and a theme config object are JSON-encoded and then base64-encoded, per the Mermaid Live URL format.
+
+**Planned output formats (future milestones):**
 
 | Format | Milestone |
 |---|---|
-| Mermaid.js class diagram | M2 |
 | PlantUML sequence diagram | M3 |
 | Mermaid.js sequence diagram | M3 |
 | GraphViz/DOT | v1.1+ |
@@ -560,34 +650,40 @@ Top-level orchestrator. Stateless — all state accumulates in `DiagramScript` a
 **Methods:**
 
 ```swift
-// Generate from file paths
+// Generate from file paths (async, with presenter)
 func generate(
     for paths: [String],
     with configuration: Configuration,
     presentedBy presenter: DiagramPresenting,
     sdkPath: String?
-)
+) async
 
-// Generate from source string (useful for testing / in-memory use)
+// Generate from source string (useful for testing / in-memory use, async)
 func generate(
     from content: String,
     with configuration: Configuration,
     presentedBy presenter: DiagramPresenting
-)
+) async
+
+// Generate a DiagramScript synchronously from file paths (for GUI integration)
+func generateScript(
+    for paths: [String],
+    with configuration: Configuration,
+    sdkPath: String?
+) -> DiagramScript
 ```
 
-Both methods block until the presenter's completion handler is called.
-
-**Example:**
+**Example (CLI/async):**
 
 ```swift
 import SwiftUMLBridgeFramework
 
 let generator = ClassDiagramGenerator()
-let config = Configuration.default
+var config = Configuration.default
+config.format = .mermaid
 let presenter = ConsolePresenter()
 
-generator.generate(
+await generator.generate(
     for: ["Sources/"],
     with: config,
     presentedBy: presenter,
@@ -595,12 +691,39 @@ generator.generate(
 )
 ```
 
+**Example (GUI/synchronous):**
+
+```swift
+let script = ClassDiagramGenerator().generateScript(
+    for: ["/path/to/Sources"],
+    with: Configuration(format: .mermaid)
+)
+print(script.text)
+```
+
+---
+
+### DiagramFormat
+
+```swift
+public enum DiagramFormat: String, Codable, Sendable, CaseIterable
+```
+
+The diagram language for generated output.
+
+| Case | Raw value | Description |
+|---|---|---|
+| `.plantuml` | `"plantuml"` | PlantUML class diagram syntax (default) |
+| `.mermaid` | `"mermaid"` | Mermaid.js class diagram syntax |
+
+Set on `Configuration.format` or via the `--format` CLI flag.
+
 ---
 
 ### Configuration
 
 ```swift
-public struct Configuration: Codable
+public struct Configuration: Codable, Sendable
 ```
 
 The complete configuration object.
@@ -616,10 +739,24 @@ The complete configuration object.
 | `relationships` | `RelationshipOptions` | Default labels and styles |
 | `stereotypes` | `Stereotypes` | Default spot characters and colors |
 | `texts` | `PageTexts?` | `nil` |
+| `format` | `DiagramFormat` | `.plantuml` |
 
 ```swift
 // Built-in defaults
 static let `default`: Configuration
+```
+
+**Example — Mermaid configuration:**
+
+```swift
+var config = Configuration.default
+config.format = .mermaid
+```
+
+Or via the memberwise initializer:
+
+```swift
+let config = Configuration(format: .mermaid)
 ```
 
 ---
@@ -675,23 +812,26 @@ func getFiles(for url: URL) -> [URL]
 ### DiagramScript
 
 ```swift
-public struct DiagramScript
+public struct DiagramScript: @unchecked Sendable
 ```
 
-Builds the complete PlantUML text from a `[SyntaxStructure]` list and a `Configuration`.
+Builds the complete diagram text from a `[SyntaxStructure]` list and a `Configuration`.
 
 ```swift
 // Build the script
 init(items: [SyntaxStructure], configuration: Configuration)
 
-// The full @startuml...@enduml text
+// The full diagram text (PlantUML or Mermaid depending on configuration.format)
 var text: String
 
-// PlantUML URL-encoded form (ZLIB deflate + custom base64)
+// The diagram language
+var format: DiagramFormat
+
+// PlantUML URL-encoded form (ZLIB deflate + custom base64). Used for planttext.com URLs.
 func encodeText() -> String
 ```
 
-Structure of the generated text:
+**PlantUML script structure:**
 
 ```
 @startuml
@@ -708,31 +848,55 @@ set namespaceSeparator none
 @enduml
 ```
 
+**Mermaid script structure:**
+
+```
+classDiagram
+[%% title: ...]
+[%% header: ...]
+[%% footer: ...]
+[type declarations]
+[relationship arrows]
+```
+
 ---
 
 ### DiagramPresenting
 
 ```swift
-public protocol DiagramPresenting
+public protocol DiagramPresenting: Sendable
 ```
 
 Implement this protocol to create a custom output target.
 
 ```swift
-func present(script: DiagramScript, completionHandler: @escaping () -> Void)
+func present(script: DiagramScript) async
 ```
 
-`ClassDiagramGenerator` calls this method and blocks on a `DispatchSemaphore` until `completionHandler` is invoked. Your implementation **must** call `completionHandler()` or the generator will hang.
+`ClassDiagramGenerator` calls `await presenter.present(script:)` after generating the script. Both `BrowserPresenter` and `ConsolePresenter` implement this protocol.
 
-**Custom presenter example:**
+**Custom presenter example (file saver):**
 
 ```swift
 struct FileSaver: DiagramPresenting {
     let url: URL
 
-    func present(script: DiagramScript, completionHandler: @escaping () -> Void) {
+    func present(script: DiagramScript) async {
         try? script.text.write(to: url, atomically: true, encoding: .utf8)
-        completionHandler()
+    }
+}
+```
+
+**Custom presenter example (format-aware):**
+
+```swift
+struct SmartFileSaver: DiagramPresenting {
+    let directory: URL
+
+    func present(script: DiagramScript) async {
+        let ext = script.format == .mermaid ? "mmd" : "puml"
+        let file = directory.appendingPathComponent("diagram.\(ext)")
+        try? script.text.write(to: file, atomically: true, encoding: .utf8)
     }
 }
 ```
@@ -745,18 +909,27 @@ struct FileSaver: DiagramPresenting {
 public struct BrowserPresenter: DiagramPresenting
 ```
 
-Opens the encoded PlantUML URL in the default macOS browser via `NSWorkspace`.
+Opens the diagram in the default macOS browser via `NSWorkspace`. Format-aware: routes PlantUML to planttext.com and Mermaid to mermaid.live.
 
 ```swift
-// Available render formats
-public enum Format {
+// Available render formats (PlantUML only; Mermaid always opens mermaid.live)
+public enum BrowserPresentationFormat {
     case `default`    // Interactive planttext.com editor
-    case png          // Direct PNG render
-    case svg          // Direct SVG render
+    case png          // Direct PNG render at planttext.com
+    case svg          // Direct SVG render at planttext.com
 }
 
-init(format: Format = .default)
+init(format: BrowserPresentationFormat = .default)
 ```
+
+**URL patterns:**
+
+| `script.format` | `BrowserPresentationFormat` | URL |
+|---|---|---|
+| `.plantuml` | `.default` | `https://www.planttext.com/?text=<encoded>` |
+| `.plantuml` | `.png` | `https://www.planttext.com/api/plantuml/png/<encoded>` |
+| `.plantuml` | `.svg` | `https://www.planttext.com/api/plantuml/svg/<encoded>` |
+| `.mermaid` | any | `https://mermaid.live/view#base64:<base64json>` |
 
 ---
 
@@ -766,7 +939,7 @@ init(format: Format = .default)
 public struct ConsolePresenter: DiagramPresenting
 ```
 
-Prints the raw PlantUML text to stdout with `print(script.text)`.
+Prints the raw diagram text to stdout with `print(script.text)`. Works for both PlantUML and Mermaid output.
 
 ```swift
 init()

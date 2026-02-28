@@ -6,7 +6,7 @@ extension SwiftUMLBridgeCLI {
     struct ClassDiagramCommand: AsyncParsableCommand {
         static let configuration = CommandConfiguration(
             commandName: "classdiagram",
-            abstract: "Generate PlantUML class diagram from Swift sources",
+            abstract: "Generate PlantUML or Mermaid class diagram from Swift sources",
             helpNames: [.short, .long]
         )
 
@@ -22,6 +22,9 @@ extension SwiftUMLBridgeCLI {
             valueName: "format"
         ))
         var output: ClassDiagramOutput?
+
+        @Option(help: "Diagram format. Options: plantuml, mermaid")
+        var format: DiagramFormat?
 
         @Option(help: "macOS SDK path for type inference resolution (e.g. `$(xcrun --show-sdk-path -sdk macosx)`)")
         var sdk: String?
@@ -53,6 +56,10 @@ extension SwiftUMLBridgeCLI {
                 }
             }
 
+            if let format {
+                bridgeConfig.format = format
+            }
+
             BridgeLogger.shared.info("SDK: \(sdk ?? "no SDK path provided")")
 
             let directory = FileManager.default.currentDirectoryPath
@@ -82,6 +89,7 @@ extension SwiftUMLBridgeCLI {
 }
 
 extension ClassDiagramOutput: ExpressibleByArgument {}
+extension DiagramFormat: ExpressibleByArgument {}
 
 enum ExtensionVisualizationFlag: EnumerableFlag {
     case hideExtensions

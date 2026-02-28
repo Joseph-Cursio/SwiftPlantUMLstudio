@@ -3,6 +3,7 @@ import Foundation
 /// Format-agnostic context accumulated while building a diagram from SyntaxStructures
 class DiagramContext {
     private(set) var configuration: Configuration
+    let format: DiagramFormat
 
     var uniqueNameForElement: [SyntaxStructure: String] = [:]
 
@@ -18,6 +19,7 @@ class DiagramContext {
 
     init(configuration: Configuration = .default) {
         self.configuration = configuration
+        self.format = configuration.format
     }
 
     var index = 0
@@ -43,7 +45,7 @@ class DiagramContext {
         }
 
         var connect = "\(linkTo) \(uniqElementAndTypes[linkTypeKey] ?? "--ERROR--") \(item.fullName!)"
-        if let relStyle = relationshipStyle(for: namedConnection)?.plantuml {
+        if format == .plantuml, let relStyle = relationshipStyle(for: namedConnection)?.plantuml {
             connect += " \(relStyle)"
         }
         if let relationshipLabel = relationshipLabel(for: namedConnection) {
@@ -93,7 +95,7 @@ class DiagramContext {
                 .first(where: { $0.name == name && $0.kind != .extension }) != nil
             if item.kind == ElementKind.extension, hasMatchingParent {
                 var connect = "\(name) \(linkTypeDependency) \(newName)"
-                if let relStyle = configuration.relationships.dependency?.style?.plantuml {
+                if format == .plantuml, let relStyle = configuration.relationships.dependency?.style?.plantuml {
                     connect += " \(relStyle)"
                 }
                 connect += " : \(configuration.relationships.dependency?.label ?? relationship)"
@@ -118,6 +120,7 @@ class DiagramContext {
     }
 
     func collectNestedTypeConnections(items: [SyntaxStructure]) {
+        guard format == .plantuml else { return }
         for item in items where item.parent != nil {
             guard let name = uniqueNameForElement[item],
                   let parentName = uniqueNameForElement[item.parent!] ?? item.parent?.name

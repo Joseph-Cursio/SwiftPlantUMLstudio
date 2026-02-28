@@ -80,7 +80,7 @@ extension SyntaxStructure {
         return "class \"\(displayName!)\" as \(alias)\(genericsStr) \(stereotype) { \(body) \n}"
     }
 
-    private func addLinking(context: DiagramContext) {
+    func addLinking(context: DiagramContext) {
         if inheritedTypes != nil, inheritedTypes!.count > 0 {
             inheritedTypes!.forEach { parent in
                 if parent.name?.contains("&") == true {
@@ -182,7 +182,7 @@ extension SyntaxStructure {
         }
     }
 
-    private func skip(element: SyntaxStructure, basedOn configuration: Configuration) -> Bool {
+    func skip(element: SyntaxStructure, basedOn configuration: Configuration) -> Bool {
         guard skip(element: self, basedOn: configuration.elements.exclude) == false else { return true }
 
         guard let elementKind = element.kind else { return true }
@@ -201,13 +201,13 @@ extension SyntaxStructure {
         return false
     }
 
-    private func skip(element: SyntaxStructure, basedOn excludeElements: [String]?) -> Bool {
+    func skip(element: SyntaxStructure, basedOn excludeElements: [String]?) -> Bool {
         guard let elementName = element.name else { return false }
         guard let excludedElements = excludeElements else { return false }
         return !excludedElements.filter { elementName.isMatching(searchPattern: $0) }.isEmpty
     }
 
-    private func genericsStatement() -> String? {
+    func genericsStatement() -> String? {
         guard let substructure = substructure else {
             guard let parent = inheritedTypes?.first else { return nil }
             return parent.name?.getAngleBracketsWithContent()

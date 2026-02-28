@@ -14,6 +14,7 @@ final class DiagramViewModel {
     var script: DiagramScript?
     var isGenerating: Bool = false
     var errorMessage: String?
+    var diagramFormat: DiagramFormat = .plantuml
 
     func generate() {
         guard !selectedPaths.isEmpty else { return }
@@ -22,9 +23,12 @@ final class DiagramViewModel {
         script = nil
 
         let paths = selectedPaths
+        let format = diagramFormat
         Task {
             let result = await Task.detached(priority: .userInitiated) {
-                ClassDiagramGenerator().generateScript(for: paths)
+                var config = Configuration.default
+                config.format = format
+                return ClassDiagramGenerator().generateScript(for: paths, with: config)
             }.value
             script = result
             isGenerating = false

@@ -21,7 +21,8 @@ public struct Configuration: Codable, Sendable {
         theme: Theme? = nil,
         relationships: RelationshipOptions = RelationshipOptions(),
         stereotypes: Stereotypes = Stereotypes.default,
-        texts: PageTexts? = nil
+        texts: PageTexts? = nil,
+        format: DiagramFormat = .plantuml
     ) {
         self.files = files
         self.elements = elements
@@ -32,6 +33,7 @@ public struct Configuration: Codable, Sendable {
         self.relationships = relationships
         self.stereotypes = stereotypes
         self.texts = texts
+        self.format = format
     }
 
     public init(from decoder: Decoder) throws {
@@ -63,6 +65,9 @@ public struct Configuration: Codable, Sendable {
         if let texts = try container.decodeIfPresent(PageTexts.self, forKey: .texts) {
             self.texts = texts
         }
+        if let format = try container.decodeIfPresent(DiagramFormat.self, forKey: .format) {
+            self.format = format
+        }
     }
 
     public static let `default` = Configuration()
@@ -82,6 +87,7 @@ public struct Configuration: Codable, Sendable {
         protocolStereotype: Stereotype.protocol
     )
     public var texts: PageTexts?
+    public var format: DiagramFormat = .plantuml
 
     internal var shallExtensionsBeMerged: Bool {
         elements.showExtensions.safelyUnwrap == .merged

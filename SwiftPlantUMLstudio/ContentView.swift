@@ -54,6 +54,15 @@ struct ContentView: View {
             }
 
             ToolbarItem(placement: .primaryAction) {
+                Picker("Format", selection: Bindable(viewModel).diagramFormat) {
+                    Text("PlantUML").tag(DiagramFormat.plantuml)
+                    Text("Mermaid").tag(DiagramFormat.mermaid)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 160)
+            }
+
+            ToolbarItem(placement: .primaryAction) {
                 Button("Generate") {
                     viewModel.generate()
                 }
