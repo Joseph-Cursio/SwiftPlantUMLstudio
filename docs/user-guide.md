@@ -1,6 +1,9 @@
 # SwiftUMLBridge User Guide
 
-SwiftUMLBridge is a command-line tool and Swift Package that generates architectural diagrams (class diagrams, dependency graphs) from Swift source code. It supports **PlantUML** and **Mermaid.js** class diagram output, with sequence diagrams planned for upcoming milestones.
+SwiftUMLBridge is a command-line tool and Swift Package that generates architectural diagrams from Swift source code. It supports **PlantUML** and **Mermaid.js** output for two diagram types:
+
+- **Class diagrams** — structural overview of types, members, and relationships (M0–M2)
+- **Sequence diagrams** — static call-graph traces from a named entry-point method (M3)
 
 ---
 
@@ -15,17 +18,23 @@ SwiftUMLBridge is a command-line tool and Swift Package that generates architect
    - [Choosing an Output Destination](#choosing-an-output-destination)
    - [Using an SDK Path](#using-an-sdk-path)
    - [Controlling Extension Display](#controlling-extension-display)
-5. [Configuration File](#configuration-file)
+5. [Generating Sequence Diagrams](#generating-sequence-diagrams)
+   - [Entry Point Syntax](#entry-point-syntax)
+   - [Controlling Traversal Depth](#controlling-traversal-depth)
+   - [How Calls Are Resolved](#how-calls-are-resolved)
+   - [Async Calls](#async-calls)
+   - [Unresolved Calls](#unresolved-calls)
+6. [Configuration File](#configuration-file)
    - [File Discovery](#file-discovery)
    - [Overriding Defaults](#overriding-defaults)
-6. [Output Destinations](#output-destinations)
-7. [Understanding the Diagram](#understanding-the-diagram)
+7. [Output Destinations](#output-destinations)
+8. [Understanding Class Diagrams](#understanding-class-diagrams)
    - [Element Types](#element-types)
    - [Relationships](#relationships)
    - [Access Level Indicators](#access-level-indicators)
    - [Format Differences](#format-differences)
-8. [Known Limitations](#known-limitations)
-9. [Getting Help](#getting-help)
+9. [Known Limitations](#known-limitations)
+10. [Getting Help](#getting-help)
 
 ---
 
@@ -68,35 +77,36 @@ swiftumlbridge --version
 
 ## Quick Start
 
-Generate a PlantUML class diagram from a directory of Swift files and open it in your browser:
+**Class diagram** — parse Swift files and open in your browser:
 
 ```bash
 swiftumlbridge classdiagram Sources/
 ```
 
-This parses every `.swift` file under `Sources/`, produces a PlantUML diagram, and opens it in the interactive [PlantText](https://www.planttext.com) editor in your default browser.
-
-Generate a Mermaid diagram and open it in [Mermaid Live](https://mermaid.live) instead:
+**Class diagram, Mermaid format:**
 
 ```bash
 swiftumlbridge classdiagram Sources/ --format mermaid
 ```
 
-To print the raw markup to the terminal:
+**Sequence diagram** — trace calls from an entry point:
 
 ```bash
-# PlantUML
-swiftumlbridge classdiagram Sources/ --output consoleOnly
+swiftumlbridge sequence Sources/ --entry MyService.process
+```
 
-# Mermaid
-swiftumlbridge classdiagram Sources/ --format mermaid --output consoleOnly
+**Sequence diagram, Mermaid, printed to stdout:**
+
+```bash
+swiftumlbridge sequence Sources/ --entry MyService.process \
+  --format mermaid --output consoleOnly
 ```
 
 ---
 
 ## Generating Class Diagrams
 
-The `classdiagram` subcommand is the primary entry point. Because it is also the default subcommand, running `swiftumlbridge` with no verb is equivalent to `swiftumlbridge classdiagram`.
+The `classdiagram` subcommand is the primary entry point for structural diagrams. Because it is also the default subcommand, running `swiftumlbridge` with no verb is equivalent to `swiftumlbridge classdiagram`.
 
 ```
 swiftumlbridge classdiagram [<paths>...] [options]
@@ -212,9 +222,99 @@ These flags override the `elements.showExtensions` setting in the configuration 
 
 ---
 
+## Generating Sequence Diagrams
+
+The `sequence` subcommand traces a static call graph from a named Swift method and renders it as a sequence diagram.
+
+```
+swiftumlbridge sequence [<paths>...] --entry Type.method [options]
+```
+
+SwiftSyntax is used to parse function bodies — this gives access to actual call sites inside method implementations, which SourceKitten alone cannot provide.
+
+### Entry Point Syntax
+
+`--entry` is required and takes the form `TypeName.methodName`:
+
+```bash
+# Trace ClassDiagramGenerator.generateScript
+swiftumlbridge sequence Sources/ --entry ClassDiagramGenerator.generateScript
+
+# Trace AuthService.login
+swiftumlbridge sequence Sources/ --entry AuthService.login
+
+# Trace across multiple directories
+swiftumlbridge sequence Sources/ Tests/ --entry DataPipeline.run
+```
+
+The type and method names are case-sensitive and must exactly match the Swift source code. If no functions match, `SequenceScript.empty` is returned and the diagram is blank.
+
+### Controlling Traversal Depth
+
+`--depth` sets the maximum number of hops to follow from the entry point. Default is `3`.
+
+```bash
+# Shallow trace — only direct calls from the entry method
+swiftumlbridge sequence Sources/ --entry MyService.run --depth 1
+
+# Deeper trace
+swiftumlbridge sequence Sources/ --entry MyService.run --depth 6
+```
+
+Each `Type.method` pair is visited at most once regardless of depth, so cycles in the call graph are safe.
+
+### How Calls Are Resolved
+
+The extractor analyzes each `FunctionCallExprSyntax` node found in a function body. Resolution is static and pattern-based:
+
+| Call pattern | Resolution |
+|---|---|
+| `self.method()` | Resolved — same type as caller |
+| `TypeName.method()` (uppercase first letter) | Resolved — `TypeName` |
+| `bareMethod()` (no receiver) | Resolved — same type as caller |
+| `variable.method()` (lowercase first letter) | Unresolved — emitted as a note |
+| Closure call or complex expression | Unresolved — emitted as a note |
+
+Calls inside free functions (not inside a type declaration) are skipped — there is no `callerType` to assign to them.
+
+### Async Calls
+
+When a call expression is wrapped in `await`, it is marked `isAsync = true` and rendered with a distinct arrow:
+
+| Format | Sync arrow | Async arrow |
+|---|---|---|
+| PlantUML | `->` | `->>` |
+| Mermaid | `->>` | `-->>` |
+
+```swift
+// Source — detected as async
+func process() async {
+    await self.flush()       // isAsync = true
+    self.log("done")         // isAsync = false
+}
+```
+
+### Unresolved Calls
+
+When a call cannot be resolved statically, it is included in the diagram as a note rather than an arrow, and its callees are not explored further:
+
+**PlantUML:**
+```
+note right: Unresolved: completion()
+```
+
+**Mermaid:**
+```
+Note right of LastParticipant: Unresolved: completion()
+```
+
+This keeps the diagram honest about what is and is not known statically.
+
+---
+
 ## Configuration File
 
-For repeatable, project-specific settings, place a `.swiftumlbridge.yml` file in the root of your project.
+For repeatable, project-specific settings, place a `.swiftumlbridge.yml` file in the root of your project. The `format` key applies to both `classdiagram` and `sequence`. All other keys are class-diagram–specific and are silently ignored by `sequence`.
 
 **Minimal example:**
 
@@ -295,6 +395,7 @@ The configuration file is located in this order:
 ```bash
 # Explicit config path
 swiftumlbridge classdiagram Sources/ --config ./configs/diagram.yml
+swiftumlbridge sequence Sources/ --entry MyService.run --config ./configs/diagram.yml
 ```
 
 ### Overriding Defaults
@@ -322,23 +423,30 @@ The default mode. For PlantUML, the markup is encoded and opened at [planttext.c
 `--output consoleOnly` is useful for CI pipelines or when you want to pipe the output to a file or another tool:
 
 ```bash
-# Save PlantUML to a file for use with a local renderer
-swiftumlbridge classdiagram Sources/ --output consoleOnly > diagram.puml
+# Save PlantUML class diagram to a file
+swiftumlbridge classdiagram Sources/ --output consoleOnly > class-diagram.puml
 
-# Render locally if you have PlantUML installed
+# Save Mermaid class diagram
+swiftumlbridge classdiagram Sources/ --format mermaid --output consoleOnly > class-diagram.mmd
+
+# Save PlantUML sequence diagram
+swiftumlbridge sequence Sources/ --entry MyService.run --output consoleOnly > sequence.puml
+
+# Save Mermaid sequence diagram
+swiftumlbridge sequence Sources/ --entry MyService.run \
+  --format mermaid --output consoleOnly > sequence.mmd
+
+# Render PlantUML locally if you have PlantUML installed
 swiftumlbridge classdiagram Sources/ --output consoleOnly | plantuml -pipe > diagram.png
-
-# Save Mermaid markup
-swiftumlbridge classdiagram Sources/ --format mermaid --output consoleOnly > diagram.mmd
 ```
 
 ---
 
-## Understanding the Diagram
+## Understanding Class Diagrams
 
 ### Element Types
 
-Each Swift type appears as a node with a stereotype indicating its kind. The stereotype label is the same in both PlantUML and Mermaid.
+Each Swift type appears as a node with a stereotype indicating its kind.
 
 | Swift Construct | Stereotype | PlantUML node | Mermaid node |
 |---|---|---|---|
@@ -388,11 +496,15 @@ A few things render differently between PlantUML and Mermaid:
 
 ## Known Limitations
 
-**Actors appear as classes.** SourceKit 6.3 on macOS 26 reports `actor` declarations with kind `source.lang.swift.decl.class`. Actors are included in the diagram but show the `<<class>>` stereotype instead of `<<actor>>`. The internal `ElementKind.actor` case is ready for when SourceKit is updated.
+**Actors appear as classes.** SourceKit 6.3 on macOS 26 reports `actor` declarations with kind `source.lang.swift.decl.class`. Actors are included in class diagrams but show the `<<class>>` stereotype instead of `<<actor>>`. The internal `ElementKind.actor` case is ready for when SourceKit is updated.
 
-**`async` and `throws` labels are unreliable.** SourceKit's `key.typename` field is the method return type, not the full signature. Annotating methods with `async` and `throws` requires SwiftSyntax (planned for a future milestone). This affects both PlantUML and Mermaid output.
+**`async` and `throws` labels are not shown in class diagrams.** SourceKit's `key.typename` field is the method return type, not the full signature. Class diagram member labels do not include `async` or `throws` annotations. Note: the sequence diagram extractor _does_ correctly detect `await`-wrapped calls using SwiftSyntax, so async calls are distinguished in sequence diagrams.
 
-**Macros parsed as their underlying type.** `@Observable`, `@Bindable`, and similar attribute macros expand to their synthesized type (class/struct), not as `source.lang.swift.decl.macro`. Macro stereotypes are planned for a future milestone.
+**Macros parsed as their underlying type in class diagrams.** `@Observable`, `@Bindable`, and similar attribute macros expand to their synthesized type (class/struct), not as `source.lang.swift.decl.macro`.
+
+**Sequence diagram: variable-receiver calls are unresolved.** `dep.doWork()` where `dep` is a local variable or parameter cannot be statically resolved. These calls appear as notes (`Unresolved: doWork()`) and are not expanded further. Only `self.x()`, `TypeName.x()`, and bare `x()` calls are resolved.
+
+**Sequence diagram: entry point must exist.** If no function matches `TypeName.methodName` exactly in the parsed sources, the diagram is empty.
 
 ---
 
@@ -404,6 +516,7 @@ swiftumlbridge --help
 
 # Subcommand help
 swiftumlbridge classdiagram --help
+swiftumlbridge sequence --help
 
 # Version
 swiftumlbridge --version

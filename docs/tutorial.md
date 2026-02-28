@@ -1,12 +1,16 @@
 # SwiftUMLBridge Tutorial
 
-This tutorial walks you through generating a class diagram from a real Swift project step by step. By the end you will have a working diagram in both PlantUML and Mermaid formats, a configuration file tuned to your project, and an understanding of how to iterate on the output.
+This tutorial walks you through generating both class diagrams and sequence diagrams from a real Swift project step by step. By the end you will have a working class diagram in both PlantUML and Mermaid formats, a configuration file tuned to your project, and a sequence diagram tracing calls from an entry-point method.
 
 ---
 
 ## What You Will Build
 
-You will generate class diagrams from the SwiftUMLBridgeFramework source itself — a moderately sized package with classes, structs, protocols, enums, and extensions. By the end of the tutorial you will have both a PlantUML diagram and a Mermaid.js diagram of the same public API. The same steps apply to any Swift project.
+You will generate diagrams from the SwiftUMLBridgeFramework source itself — a moderately sized package with classes, structs, protocols, enums, and extensions. The same steps apply to any Swift project.
+
+**Part 1 (Steps 1–9):** A refined class diagram of the public API in both PlantUML and Mermaid.
+
+**Part 2 (Steps 10–12):** A sequence diagram tracing the call graph of `ClassDiagramGenerator.generateScript`.
 
 ---
 
@@ -24,7 +28,9 @@ swiftumlbridge --version
 
 ---
 
-## Step 1 — Run With No Configuration
+## Part 1 — Class Diagrams
+
+### Step 1 — Run With No Configuration
 
 Start with zero configuration to see what the tool produces by default.
 
@@ -46,7 +52,7 @@ Your browser opens [planttext.com](https://www.planttext.com) with the diagram p
 
 ---
 
-## Step 2 — Focus on Public API
+### Step 2 — Focus on Public API
 
 The framework's public surface is smaller and more useful for documentation purposes. Restrict the diagram to `public` types and members.
 
@@ -77,11 +83,11 @@ cd /path/to/SwiftPlantUMLstudio/SwiftUMLBridge
 swiftumlbridge classdiagram Sources/SwiftUMLBridgeFramework/ --output consoleOnly
 ```
 
-The output is now limited to `public` types (`ClassDiagramGenerator`, `Configuration`, `FileCollector`, etc.) and their `public` members.
+The output is now limited to `public` types (`ClassDiagramGenerator`, `Configuration`, `FileCollector`, `SequenceDiagramGenerator`, etc.) and their `public` members.
 
 ---
 
-## Step 3 — Clean Up Extensions
+### Step 3 — Clean Up Extensions
 
 `ClassDiagramGenerator` and several other types have extensions. By default each extension is a separate node connected by a dependency arrow, which adds visual clutter. Merge extension members back into their parent types.
 
@@ -107,7 +113,7 @@ The diagram is now flatter. Extension members appear inline under their parent t
 
 ---
 
-## Step 4 — Suppress Common Protocol Conformances
+### Step 4 — Suppress Common Protocol Conformances
 
 The `Configuration`, `FileOptions`, and other types conform to `Codable`. That relationship arrow adds noise without adding information in a class-level overview. Exclude it.
 
@@ -139,7 +145,7 @@ Reload the diagram. The standard library protocol conformances are gone, leaving
 
 ---
 
-## Step 5 — Add a Title and Theme
+### Step 5 — Add a Title and Theme
 
 Make the diagram self-documenting with page text and a visual theme.
 
@@ -185,7 +191,7 @@ You should see a styled diagram with a title bar at the top and a footer.
 
 ---
 
-## Step 6 — Generate a Mermaid Diagram
+### Step 6 — Generate a Mermaid Diagram
 
 The same project and config can produce a Mermaid.js diagram with one flag. Mermaid diagrams open in [Mermaid Live](https://mermaid.live) and are natively supported in GitHub Markdown, Notion, and many other tools.
 
@@ -237,7 +243,7 @@ elements:
 
 ---
 
-## Step 7 — Include Only Specific Files
+### Step 7 — Include Only Specific Files
 
 Suppose you want a focused diagram of just the emitter types, without the parsing and model layers. Use `files.include` to restrict which files are parsed.
 
@@ -266,11 +272,11 @@ With `files.include` set, the positional path arguments are ignored — the glob
 swiftumlbridge classdiagram
 ```
 
-The diagram now shows only the emitter types: `DiagramScript`, `DiagramText`, `ConsolePresenter`, `BrowserPresenter`, `DiagramPresenting`.
+The diagram now shows only the emitter types: `DiagramScript`, `SequenceScript`, `DiagramOutputting`, `ConsolePresenter`, `BrowserPresenter`, `DiagramPresenting`.
 
 ---
 
-## Step 8 — Save the Diagram to a File
+### Step 8 — Save the Diagram to a File
 
 When you are happy with the output, save it for use in documentation or version control:
 
@@ -307,7 +313,7 @@ GitHub renders the diagram inline in the Markdown preview.
 
 ---
 
-## Step 9 — Applying to Your Own Project
+### Step 9 — Applying to Your Own Project
 
 The same workflow applies to any Swift project:
 
@@ -338,8 +344,107 @@ The same workflow applies to any Swift project:
 
 ---
 
+## Part 2 — Sequence Diagrams
+
+Sequence diagrams show how a specific method calls other methods — and how those callees call further methods — up to a configurable depth. SwiftSyntax is used to parse function bodies, so you get real call-site information rather than just declarations.
+
+### Step 10 — Your First Sequence Diagram
+
+Trace `ClassDiagramGenerator.generateScript` to see what it calls:
+
+```bash
+cd /path/to/SwiftPlantUMLstudio/SwiftUMLBridge
+
+swiftumlbridge sequence Sources/ \
+  --entry ClassDiagramGenerator.generateScript \
+  --output consoleOnly
+```
+
+The output is a PlantUML sequence diagram starting with `@startuml` and a `title ClassDiagramGenerator.generateScript` line. Below the title, `participant` lines list every type that appears in the call chain, followed by the call arrows.
+
+Open it in the browser:
+
+```bash
+swiftumlbridge sequence Sources/ --entry ClassDiagramGenerator.generateScript
+```
+
+planttext.com opens with the sequence diagram. Each arrow represents a single method call found in a function body. Solid arrows (`->`) are synchronous; open arrows (`->>`) are async calls wrapped in `await`.
+
+> **Reading the diagram:** Each row shows one call. `A -> B : method()` means the method `method` on type `B` was called from type `A`. Note/comment lines beginning with `note right:` are calls that could not be resolved statically (e.g., variable-receiver calls).
+
+---
+
+### Step 11 — Adjust Depth and Format
+
+The default depth of `3` follows call chains up to three levels deep. Try a shallower trace to see only direct callers:
+
+```bash
+swiftumlbridge sequence Sources/ \
+  --entry ClassDiagramGenerator.generateScript \
+  --depth 1 --output consoleOnly
+```
+
+Now try Mermaid format for the same entry point:
+
+```bash
+swiftumlbridge sequence Sources/ \
+  --entry ClassDiagramGenerator.generateScript \
+  --format mermaid --output consoleOnly
+```
+
+The Mermaid sequence diagram starts with `sequenceDiagram` and `%% title:`. Arrows use Mermaid sequence syntax: `->>` for synchronous calls, `-->>` for async calls. Open it in Mermaid Live:
+
+```bash
+swiftumlbridge sequence Sources/ \
+  --entry ClassDiagramGenerator.generateScript \
+  --format mermaid
+```
+
+> **Embedding in GitHub:** Save the Mermaid markup and wrap it in a ` ```mermaid ` fence — GitHub renders sequence diagrams inline, just like class diagrams.
+
+---
+
+### Step 12 — Understanding Resolution and Notes
+
+Not every call in a function body can be statically resolved. Try tracing a method that has variable-receiver calls:
+
+```bash
+swiftumlbridge sequence Sources/ \
+  --entry FileCollector.getFiles \
+  --output consoleOnly
+```
+
+Look for lines beginning with `note right: Unresolved:`. These represent calls where the receiver is a local variable or parameter (e.g., `enumerator.nextObject()`) — the tool cannot determine the callee's type statically. Unresolved calls appear as diagram notes and are not expanded further.
+
+**What gets resolved:**
+- `self.doWork()` → same type
+- `FileCollector().getFiles(...)` → `FileCollector`
+- `bareHelperCall()` → same type
+
+**What is not resolved:**
+- `url.resourceValues(forKeys:)` — `url` is a parameter; type is unknown
+- `fileAttributes.isRegularFile` — property access on a resolved optional chain
+
+This is expected behavior. The diagram shows what can be statically known without full type inference.
+
+**Saving the sequence diagram:**
+
+```bash
+# PlantUML sequence to file
+swiftumlbridge sequence Sources/ \
+  --entry ClassDiagramGenerator.generateScript \
+  --output consoleOnly > docs/sequence-classdiagram.puml
+
+# Mermaid sequence to file
+swiftumlbridge sequence Sources/ \
+  --entry ClassDiagramGenerator.generateScript \
+  --format mermaid --output consoleOnly > docs/sequence-classdiagram.mmd
+```
+
+---
+
 ## What's Next
 
-- Read the [User Guide](user-guide.md) for full documentation of every flag and option.
-- Read the [Reference Guide](reference.md) for the complete YAML schema, all themes, all element kinds, relationship style options, and the framework API.
-- Check the [Known Limitations](user-guide.md#known-limitations) section for current constraints (actor stereotypes, async/throws labeling).
+- Read the [User Guide](user-guide.md) for full documentation of every flag and option, including the complete `sequence` subcommand reference.
+- Read the [Reference Guide](reference.md) for the complete YAML schema, all themes, all element kinds, relationship style options, sequence diagram format details, and the full framework API (`SequenceDiagramGenerator`, `CallGraph`, `CallEdge`, `DiagramOutputting`).
+- Check the [Known Limitations](user-guide.md#known-limitations) section for current constraints (actor stereotypes, class-diagram async/throws labeling, sequence diagram variable-receiver resolution).

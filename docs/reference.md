@@ -9,6 +9,7 @@ Complete reference for all CLI options, YAML configuration fields, element kinds
 1. [CLI Reference](#cli-reference)
    - [Root Command](#root-command)
    - [classdiagram](#classdiagram)
+   - [sequence](#sequence)
 2. [Configuration File Schema](#configuration-file-schema)
    - [files](#files)
    - [elements](#elements)
@@ -21,6 +22,8 @@ Complete reference for all CLI options, YAML configuration fields, element kinds
    - [texts](#texts)
    - [format](#format)
 3. [Diagram Formats](#diagram-formats)
+   - [Class Diagrams](#class-diagrams)
+   - [Sequence Diagrams](#sequence-diagrams)
 4. [Element Kinds](#element-kinds)
 5. [Access Levels](#access-levels)
 6. [Relationship Arrows](#relationship-arrows)
@@ -31,14 +34,19 @@ Complete reference for all CLI options, YAML configuration fields, element kinds
 11. [Glob Pattern Syntax](#glob-pattern-syntax)
 12. [Framework API](#framework-api)
     - [ClassDiagramGenerator](#classdiagramgenerator)
+    - [SequenceDiagramGenerator](#sequencediagramgenerator)
     - [DiagramFormat](#diagramformat)
     - [Configuration](#configuration)
     - [ConfigurationProvider](#configurationprovider)
     - [FileCollector](#filecollector)
+    - [DiagramOutputting](#diagramoutputting)
     - [DiagramScript](#diagramscript)
+    - [SequenceScript](#sequencescript)
     - [DiagramPresenting](#diagrampresenting)
     - [BrowserPresenter](#browserpresenter)
     - [ConsolePresenter](#consolepresenter)
+    - [CallGraph](#callgraph)
+    - [CallEdge](#calledge)
     - [BridgeLogger](#bridgelogger)
 13. [Version](#version)
 
@@ -121,9 +129,74 @@ swiftumlbridge classdiagram Sources/ --merge-extensions
 
 ---
 
+### sequence
+
+Generate a PlantUML or Mermaid sequence diagram by statically tracing call edges from a named entry-point method.
+
+```
+swiftumlbridge sequence [<paths>...] --entry Type.method [options]
+```
+
+**Positional arguments:**
+
+| Argument | Type | Description |
+|---|---|---|
+| `<paths>...` | `[String]` | Paths to `.swift` files or directories. Defaults to the current directory (`.`). |
+
+**Required option:**
+
+| Option | Type | Description |
+|---|---|---|
+| `--entry <Type.method>` | `String` | Entry point in `TypeName.methodName` form (e.g., `--entry ClassDiagramGenerator.generateScript`). Case-sensitive. |
+
+**Options:**
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--depth <n>` | `Int` | `3` | Maximum call-graph depth to traverse from the entry point. |
+| `--format <format>` | `DiagramFormat?` | `plantuml` | Diagram language. One of: `plantuml`, `mermaid`. |
+| `--output <format>` | `ClassDiagramOutput?` | `browser` | Output destination. One of: `browser`, `browserImageOnly`, `consoleOnly`. |
+| `--config <path>` | `String?` | `nil` | Path to a custom `.swiftumlbridge.yml` config file. |
+| `--sdk <path>` | `String?` | `nil` | macOS SDK path (reserved; not currently used by the sequence extractor). |
+| `--help` | Flag | — | Print subcommand help and exit. |
+
+**Call resolution rules:**
+
+| Call pattern | Resolved as |
+|---|---|
+| `self.method()` | Same type as caller |
+| `TypeName.method()` (uppercase receiver) | `TypeName` |
+| `bareMethod()` (no receiver) | Same type as caller |
+| `variable.method()` (lowercase receiver) | Unresolved — emitted as a note |
+| Closure / complex expression call | Unresolved — emitted as a note |
+
+Unresolved calls appear in the diagram as notes rather than arrows and are not expanded further during traversal.
+
+**`await` detection:** Calls wrapped in an `await` expression are marked as async and rendered with a distinct arrow style.
+
+**Examples:**
+
+```bash
+# Trace ClassDiagramGenerator.generateScript up to depth 3 (default), open in browser
+swiftumlbridge sequence Sources/ --entry ClassDiagramGenerator.generateScript
+
+# Same entry point, Mermaid format, printed to stdout
+swiftumlbridge sequence Sources/ \
+  --entry ClassDiagramGenerator.generateScript \
+  --format mermaid --output consoleOnly
+
+# Deeper traversal
+swiftumlbridge sequence Sources/ --entry MyService.handle --depth 5
+
+# Multiple source directories
+swiftumlbridge sequence Sources/ Tests/ --entry AuthService.login
+```
+
+---
+
 ## Configuration File Schema
 
-The configuration file is a YAML file named `.swiftumlbridge.yml`. All fields are optional. Any field you omit uses its built-in default.
+The configuration file is a YAML file named `.swiftumlbridge.yml`. All fields are optional. Any field you omit uses its built-in default. The `sequence` subcommand uses `format` from the config file; other fields (elements, relationships, etc.) are class-diagram–specific and are ignored by `sequence`.
 
 **Annotated full schema:**
 
@@ -195,7 +268,7 @@ elements:
 # ─── hideShowCommands ──────────────────────────────────────────────────────
 hideShowCommands:
   # Raw PlantUML 'hide' or 'show' directives inserted verbatim into the diagram.
-  # Ignored when format is 'mermaid'.
+  # Ignored when format is 'mermaid'. Class diagrams only.
   # Type: [String]  Default: ["hide empty members"]
   - "hide empty members"
   - "hide @unlinked"
@@ -203,7 +276,7 @@ hideShowCommands:
 # ─── skinparamCommands ─────────────────────────────────────────────────────
 skinparamCommands:
   # Raw PlantUML 'skinparam' directives inserted verbatim into the diagram.
-  # Ignored when format is 'mermaid'.
+  # Ignored when format is 'mermaid'. Class diagrams only.
   # Type: [String]  Default: ["skinparam shadowing false"]
   - "skinparam shadowing false"
   - "skinparam sequenceMessageAlign center"
@@ -211,7 +284,7 @@ skinparamCommands:
 # ─── includeRemoteURL ──────────────────────────────────────────────────────
 includeRemoteURL:
   # URL for a PlantUML '!include' directive. Useful for shared style libraries.
-  # Ignored when format is 'mermaid'.
+  # Ignored when format is 'mermaid'. Class diagrams only.
   # Type: String?  Default: nil
   "https://raw.githubusercontent.com/example/styles/main/custom.iuml"
 
@@ -219,7 +292,7 @@ includeRemoteURL:
 theme: minty
   # PlantUML theme name. camelCase names are converted to kebab-case automatically.
   # Use __directive__("name") to pass a raw PlantUML theme directive as-is.
-  # Ignored when format is 'mermaid'.
+  # Ignored when format is 'mermaid'. Class diagrams only.
   # Type: String?  Default: nil
   # See the Themes section for available values.
 
@@ -299,15 +372,18 @@ format: plantuml
   # Diagram language for the generated output.
   # Type: plantuml | mermaid  Default: plantuml
   # Can be overridden at runtime with the --format CLI flag.
+  # Applies to both classdiagram and sequence subcommands.
 ```
 
 ---
 
 ## Diagram Formats
 
-SwiftUMLBridge supports two output diagram languages.
+SwiftUMLBridge supports two output diagram languages, applied to both class diagrams and sequence diagrams.
 
-### PlantUML (default)
+### Class Diagrams
+
+#### PlantUML (default)
 
 Set `format: plantuml` or pass `--format plantuml`. The generated script is wrapped in `@startuml` / `@enduml` and uses PlantUML class diagram syntax.
 
@@ -331,7 +407,7 @@ set namespaceSeparator none
 
 **PlantUML-specific features:** themes, skinparam commands, hide/show commands, remote include URL, custom spot stereotypes, relationship line styles/colors, nested type `+--` composition connections.
 
-### Mermaid
+#### Mermaid
 
 Set `format: mermaid` or pass `--format mermaid`. The generated script starts with `classDiagram` and uses [Mermaid.js](https://mermaid.js.org) class diagram syntax.
 
@@ -364,6 +440,84 @@ classDiagram
 | Instance method | `name()` | `name()` |
 | Static method | `{static} name()` | `name()$` |
 | Enum case | `name` | `name` |
+
+---
+
+### Sequence Diagrams
+
+Sequence diagrams trace the static call graph from an entry-point method using SwiftSyntax. Both PlantUML and Mermaid output are supported.
+
+#### PlantUML sequence format
+
+**Script structure:**
+```
+@startuml
+title EntryType.entryMethod
+participant EntryType
+participant CalleeType
+...
+
+EntryType -> CalleeType : resolvedMethod()
+EntryType ->> CalleeType : asyncMethod()
+note right: Unresolved: variableCall()
+@enduml
+```
+
+**Arrow styles:**
+
+| Arrow | Meaning |
+|---|---|
+| `->` | Synchronous call |
+| `->>` | Asynchronous call (wrapped in `await`) |
+
+Unresolved calls (variable-receiver, closures) appear as `note right: Unresolved: expr()` and are not expanded further.
+
+**Browser output:** Same encoding as class diagrams — opened at planttext.com.
+
+#### Mermaid sequence format
+
+**Script structure:**
+```
+sequenceDiagram
+%% title: EntryType.entryMethod
+participant EntryType
+participant CalleeType
+...
+
+EntryType->>CalleeType: resolvedMethod()
+EntryType-->>CalleeType: asyncMethod()
+Note right of CalleeType: Unresolved: variableCall()
+```
+
+**Arrow styles:**
+
+| Arrow | Meaning |
+|---|---|
+| `->>` | Synchronous call (solid arrowhead) |
+| `-->>` | Asynchronous call (dashed, indicating async) |
+
+Unresolved calls appear as `Note right of <lastParticipant>: Unresolved: expr()`.
+
+**Browser output:** Same base64 JSON encoding as class diagrams — opened at mermaid.live.
+
+#### Call resolution
+
+The sequence extractor uses SwiftSyntax to walk function bodies. Only statically resolvable calls produce arrows. The following table summarizes resolution behavior:
+
+| Source pattern | Resolved? | calleeType |
+|---|---|---|
+| `self.method()` | Yes | same as caller |
+| `TypeName.method()` (uppercase) | Yes | `TypeName` |
+| `bareMethod()` | Yes | same as caller |
+| `variable.method()` (lowercase) | No | `nil` — emitted as note |
+| `{ }()` or complex expression | No | `nil` — emitted as note |
+
+#### Sequence diagram limitations
+
+- **Variable-receiver calls are unresolved.** `dep.doWork()` where `dep` is a local variable or parameter cannot be statically resolved.
+- **No dynamic dispatch resolution.** Protocol method calls through an existential are treated as same-type calls.
+- **Entry point must exist.** If no functions match `Type.method` in the parsed sources, `SequenceScript.empty` is returned and the diagram is blank.
+- **Depth applies per unique caller.** Each `Type.method` pair is visited at most once, regardless of depth.
 
 ---
 
@@ -429,7 +583,7 @@ elements:
 
 ## Relationship Arrows
 
-Arrow notation used in generated diagrams. Both PlantUML and Mermaid use the same arrow strings for inheritance, conformance, and extension connections.
+Arrow notation used in generated class diagrams. Both PlantUML and Mermaid use the same arrow strings for inheritance, conformance, and extension connections.
 
 | Arrow | Syntax | Meaning |
 |---|---|---|
@@ -438,6 +592,8 @@ Arrow notation used in generated diagrams. Both PlantUML and Mermaid use the sam
 | Extension dependency | `Extension <.. Type` | Extension on a named type |
 | Composition (nested) | `Outer +-- Inner` | Nested type declaration **(PlantUML only)** |
 | Generic link | `A -- B` | Generic relationship |
+
+For sequence diagram arrows, see [Sequence Diagrams](#sequence-diagrams).
 
 ---
 
@@ -562,7 +718,7 @@ PlantUML accepts any HTML 4 color name. A representative set:
 
 ## Output Destinations
 
-Controlled by the `--output` CLI flag. Applies to both PlantUML and Mermaid formats.
+Controlled by the `--output` CLI flag. Applies to both PlantUML and Mermaid formats, and to both `classdiagram` and `sequence` subcommands.
 
 | Value | PlantUML behavior | Mermaid behavior |
 |---|---|---|
@@ -573,14 +729,6 @@ Controlled by the `--output` CLI flag. Applies to both PlantUML and Mermaid form
 **PlantUML encoding:** ZLIB deflate followed by PlantUML's custom base64 alphabet (`0-9A-Za-z-_=`).
 
 **Mermaid encoding:** The script text and a theme config object are JSON-encoded and then base64-encoded, per the Mermaid Live URL format.
-
-**Planned output formats (future milestones):**
-
-| Format | Milestone |
-|---|---|
-| PlantUML sequence diagram | M3 |
-| Mermaid.js sequence diagram | M3 |
-| GraphViz/DOT | v1.1+ |
 
 ---
 
@@ -645,7 +793,7 @@ SwiftUMLBridge is also usable as a Swift Package library (`SwiftUMLBridgeFramewo
 public struct ClassDiagramGenerator
 ```
 
-Top-level orchestrator. Stateless — all state accumulates in `DiagramScript` and `DiagramContext`.
+Top-level orchestrator for class diagrams. Stateless — all state accumulates in `DiagramScript` and `DiagramContext`.
 
 **Methods:**
 
@@ -654,7 +802,7 @@ Top-level orchestrator. Stateless — all state accumulates in `DiagramScript` a
 func generate(
     for paths: [String],
     with configuration: Configuration,
-    presentedBy presenter: DiagramPresenting,
+    presentedBy presenter: any DiagramPresenting,
     sdkPath: String?
 ) async
 
@@ -662,7 +810,7 @@ func generate(
 func generate(
     from content: String,
     with configuration: Configuration,
-    presentedBy presenter: DiagramPresenting
+    presentedBy presenter: any DiagramPresenting
 ) async
 
 // Generate a DiagramScript synchronously from file paths (for GUI integration)
@@ -703,18 +851,61 @@ print(script.text)
 
 ---
 
+### SequenceDiagramGenerator
+
+```swift
+public struct SequenceDiagramGenerator
+```
+
+Generates sequence diagrams by walking Swift source files with SwiftSyntax, building a call graph, and rendering a `SequenceScript`.
+
+**Methods:**
+
+```swift
+// Generate a SequenceScript synchronously
+func generateScript(
+    for paths: [String],
+    entryType: String,
+    entryMethod: String,
+    depth: Int = 3,
+    with configuration: Configuration = .default
+) -> SequenceScript
+```
+
+**Example:**
+
+```swift
+import SwiftUMLBridgeFramework
+
+var config = Configuration.default
+config.format = .mermaid
+
+let script = SequenceDiagramGenerator().generateScript(
+    for: ["Sources/"],
+    entryType: "AuthService",
+    entryMethod: "login",
+    depth: 4,
+    with: config
+)
+print(script.text)
+```
+
+When no matching entry point is found, returns `SequenceScript.empty` (blank diagram text).
+
+---
+
 ### DiagramFormat
 
 ```swift
 public enum DiagramFormat: String, Codable, Sendable, CaseIterable
 ```
 
-The diagram language for generated output.
+The diagram language for generated output. Applies to both class and sequence diagrams.
 
 | Case | Raw value | Description |
 |---|---|---|
-| `.plantuml` | `"plantuml"` | PlantUML class diagram syntax (default) |
-| `.mermaid` | `"mermaid"` | Mermaid.js class diagram syntax |
+| `.plantuml` | `"plantuml"` | PlantUML syntax (default) |
+| `.mermaid` | `"mermaid"` | Mermaid.js syntax |
 
 Set on `Configuration.format` or via the `--format` CLI flag.
 
@@ -809,13 +1000,55 @@ func getFiles(for url: URL) -> [URL]
 
 ---
 
+### DiagramOutputting
+
+```swift
+public protocol DiagramOutputting: Sendable
+```
+
+The shared protocol for all diagram output types. Both `DiagramScript` (class diagrams) and `SequenceScript` (sequence diagrams) conform to this protocol. Use it when your code needs to handle either diagram type without specializing.
+
+```swift
+var text: String { get }          // The raw diagram markup
+var format: DiagramFormat { get } // .plantuml or .mermaid
+func encodeText() -> String       // PlantUML URL encoding (ZLIB + custom base64)
+```
+
+**Custom presenter example using the protocol:**
+
+```swift
+struct FileSaver: DiagramPresenting {
+    let url: URL
+
+    func present(script: any DiagramOutputting) async {
+        try? script.text.write(to: url, atomically: true, encoding: .utf8)
+    }
+}
+```
+
+**Format-aware file saver:**
+
+```swift
+struct SmartFileSaver: DiagramPresenting {
+    let directory: URL
+
+    func present(script: any DiagramOutputting) async {
+        let ext = script.format == .mermaid ? "mmd" : "puml"
+        let file = directory.appendingPathComponent("diagram.\(ext)")
+        try? script.text.write(to: file, atomically: true, encoding: .utf8)
+    }
+}
+```
+
+---
+
 ### DiagramScript
 
 ```swift
-public struct DiagramScript: @unchecked Sendable
+public struct DiagramScript: @unchecked Sendable, DiagramOutputting
 ```
 
-Builds the complete diagram text from a `[SyntaxStructure]` list and a `Configuration`.
+Builds the complete class diagram text from a `[SyntaxStructure]` list and a `Configuration`.
 
 ```swift
 // Build the script
@@ -831,32 +1064,52 @@ var format: DiagramFormat
 func encodeText() -> String
 ```
 
-**PlantUML script structure:**
+---
+
+### SequenceScript
+
+```swift
+public struct SequenceScript: Sendable, DiagramOutputting
+```
+
+Holds a rendered sequence diagram. Produced by `SequenceDiagramGenerator`. Conforms to `DiagramOutputting` and can be passed directly to any presenter.
+
+```swift
+var text: String          // The sequence diagram markup
+var format: DiagramFormat // .plantuml or .mermaid
+func encodeText() -> String  // PlantUML URL encoding
+
+// Returned when the entry point doesn't match any source, or when traversal yields nothing
+static let empty: SequenceScript
+```
+
+**Participant ordering:** Participants appear in the order they are first seen in the traversal — the entry type is always listed first.
+
+**PlantUML output sample:**
 
 ```
 @startuml
-[!theme <name>]
-[!include <url>]
-' STYLE START
-hide empty members
-skinparam shadowing false
-' STYLE END
-set namespaceSeparator none
-[header/title/legend/caption/footer texts]
-[type declarations]
-[relationship arrows]
+title MyService.process
+participant MyService
+participant Database
+
+MyService -> Database : fetchRecord()
+MyService ->> Database : asyncFlush()
+note right: Unresolved: completion()
 @enduml
 ```
 
-**Mermaid script structure:**
+**Mermaid output sample:**
 
 ```
-classDiagram
-[%% title: ...]
-[%% header: ...]
-[%% footer: ...]
-[type declarations]
-[relationship arrows]
+sequenceDiagram
+%% title: MyService.process
+participant MyService
+participant Database
+
+MyService->>Database: fetchRecord()
+MyService-->>Database: asyncFlush()
+Note right of Database: Unresolved: completion()
 ```
 
 ---
@@ -867,39 +1120,13 @@ classDiagram
 public protocol DiagramPresenting: Sendable
 ```
 
-Implement this protocol to create a custom output target.
+Implement this protocol to create a custom output target. The `present(script:)` method accepts any `DiagramOutputting` value — both `DiagramScript` and `SequenceScript` conform.
 
 ```swift
-func present(script: DiagramScript) async
+func present(script: any DiagramOutputting) async
 ```
 
-`ClassDiagramGenerator` calls `await presenter.present(script:)` after generating the script. Both `BrowserPresenter` and `ConsolePresenter` implement this protocol.
-
-**Custom presenter example (file saver):**
-
-```swift
-struct FileSaver: DiagramPresenting {
-    let url: URL
-
-    func present(script: DiagramScript) async {
-        try? script.text.write(to: url, atomically: true, encoding: .utf8)
-    }
-}
-```
-
-**Custom presenter example (format-aware):**
-
-```swift
-struct SmartFileSaver: DiagramPresenting {
-    let directory: URL
-
-    func present(script: DiagramScript) async {
-        let ext = script.format == .mermaid ? "mmd" : "puml"
-        let file = directory.appendingPathComponent("diagram.\(ext)")
-        try? script.text.write(to: file, atomically: true, encoding: .utf8)
-    }
-}
-```
+Both `BrowserPresenter` and `ConsolePresenter` implement this protocol. `ClassDiagramGenerator` and `SequenceDiagramGenerator` both call `await presenter.present(script:)` after generating the script.
 
 ---
 
@@ -909,7 +1136,7 @@ struct SmartFileSaver: DiagramPresenting {
 public struct BrowserPresenter: DiagramPresenting
 ```
 
-Opens the diagram in the default macOS browser via `NSWorkspace`. Format-aware: routes PlantUML to planttext.com and Mermaid to mermaid.live.
+Opens the diagram in the default macOS browser via `NSWorkspace`. Format-aware: routes PlantUML to planttext.com and Mermaid to mermaid.live. Works for both class and sequence diagrams.
 
 ```swift
 // Available render formats (PlantUML only; Mermaid always opens mermaid.live)
@@ -939,10 +1166,53 @@ init(format: BrowserPresentationFormat = .default)
 public struct ConsolePresenter: DiagramPresenting
 ```
 
-Prints the raw diagram text to stdout with `print(script.text)`. Works for both PlantUML and Mermaid output.
+Prints the raw diagram text to stdout with `print(script.text)`. Works for both PlantUML and Mermaid output, and for both class and sequence diagrams.
 
 ```swift
 init()
+```
+
+---
+
+### CallGraph
+
+```swift
+public struct CallGraph: Sendable
+```
+
+An in-memory graph of `CallEdge` values extracted from Swift source. Used internally by `SequenceDiagramGenerator`. Available for direct use when embedding the framework.
+
+```swift
+init(edges: [CallEdge])
+var edges: [CallEdge]
+
+// Depth-limited BFS from the given entry point.
+// Returns all traversed edges in order; stops at maxDepth.
+func traverse(from entryType: String, entryMethod: String, maxDepth: Int) -> [CallEdge]
+```
+
+**Traversal rules:**
+- Each `Type.method` pair is visited at most once (cycle protection).
+- Unresolved edges (`isUnresolved == true`) are included in the result but are not expanded further.
+- Traversal stops when `maxDepth` is reached.
+
+---
+
+### CallEdge
+
+```swift
+public struct CallEdge: Sendable, Hashable
+```
+
+A single directed call relationship extracted from a function body by `CallGraphExtractor`.
+
+```swift
+public let callerType: String     // Type that contains the calling method
+public let callerMethod: String   // Name of the calling method
+public let calleeType: String?    // Type of the callee; nil when unresolved
+public let calleeMethod: String   // Name of the called method
+public let isAsync: Bool          // true when the call is wrapped in `await`
+public let isUnresolved: Bool     // true when the callee type cannot be statically determined
 ```
 
 ---
