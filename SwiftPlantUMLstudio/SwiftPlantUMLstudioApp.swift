@@ -14,5 +14,13 @@ struct SwiftPlantUMLstudioApp: App {
             ContentView()
         }
         .defaultSize(width: 1100, height: 700)
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("Open…") {
+                    NotificationCenter.default.post(name: .openFile, object: nil)
+                }
+                .keyboardShortcut("o", modifiers: .command)
+            }
+        }
     }
 }

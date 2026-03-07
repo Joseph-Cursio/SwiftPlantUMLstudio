@@ -16,9 +16,13 @@ struct ContentView: View {
     var body: some View {
         @Bindable var viewModel = viewModel
 
-        HSplitView {
+        NavigationSplitView {
             sourceEditor
+                .navigationSplitViewColumnWidth(min: 300, ideal: 400)
+                .navigationTitle("Markup")
+        } detail: {
             diagramPreview
+                .navigationTitle("Preview")
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -38,6 +42,9 @@ struct ContentView: View {
                 generateButton
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openFile)) { _ in
+            openPanel()
+        }
     }
 
     // MARK: - Subviews
@@ -46,7 +53,6 @@ struct ContentView: View {
         TextEditor(text: .constant(viewModel.currentScript?.text ?? ""))
             .font(.system(.body, design: .monospaced))
             .disabled(true)
-            .frame(minWidth: 300)
     }
 
     private var diagramPreview: some View {
@@ -60,7 +66,6 @@ struct ContentView: View {
                 placeholderText
             }
         }
-        .frame(minWidth: 400)
     }
 
     private var placeholderText: some View {
@@ -81,11 +86,11 @@ struct ContentView: View {
         Button("Open…", systemImage: "folder") {
             openPanel()
         }
-        .help("Open Swift files or directories")
+        .help("Open Swift files or directories (⌘O)")
     }
 
     private var pathSummaryText: some View {
-        Text(pathSummary)
+        Text(viewModel.pathSummary)
             .foregroundStyle(.secondary)
             .lineLimit(1)
             .truncationMode(.middle)
@@ -140,22 +145,11 @@ struct ContentView: View {
             viewModel.generate()
         }
         .keyboardShortcut("r", modifiers: .command)
+        .help("Generate diagram (⌘R)")
         .disabled(viewModel.selectedPaths.isEmpty || viewModel.isGenerating)
     }
 
     // MARK: - Logic
-
-    private var pathSummary: String {
-        switch viewModel.selectedPaths.count {
-        case 0:
-            return "No source selected"
-        case 1:
-            return URL(fileURLWithPath: viewModel.selectedPaths[0]).lastPathComponent
-        default:
-            let first = URL(fileURLWithPath: viewModel.selectedPaths[0]).lastPathComponent
-            return "\(first) + \(viewModel.selectedPaths.count - 1) more"
-        }
-    }
 
     private func openPanel() {
         let panel = NSOpenPanel()
@@ -168,6 +162,10 @@ struct ContentView: View {
         guard panel.runModal() == .OK else { return }
         viewModel.selectedPaths = panel.urls.map(\.path)
     }
+}
+
+extension Notification.Name {
+    static let openFile = Notification.Name("openFile")
 }
 
 #Preview {

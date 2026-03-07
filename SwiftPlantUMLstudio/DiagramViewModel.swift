@@ -5,6 +5,7 @@
 //  Created by joe cursio on 2/27/26.
 //
 
+import Foundation
 import Observation
 import SwiftUMLBridgeFramework
 
@@ -36,6 +37,18 @@ final class DiagramViewModel {
         case .classDiagram: return script
         case .sequenceDiagram: return sequenceScript
         case .dependencyGraph: return depsScript
+        }
+    }
+
+    var pathSummary: String {
+        switch selectedPaths.count {
+        case 0:
+            return "No source selected"
+        case 1:
+            return URL(fileURLWithPath: selectedPaths[0]).lastPathComponent
+        default:
+            let first = URL(fileURLWithPath: selectedPaths[0]).lastPathComponent
+            return "\(first) + \(selectedPaths.count - 1) more"
         }
     }
 
