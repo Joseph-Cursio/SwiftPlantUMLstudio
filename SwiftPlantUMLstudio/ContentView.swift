@@ -14,109 +14,136 @@ struct ContentView: View {
     @State private var viewModel = DiagramViewModel()
 
     var body: some View {
-        HSplitView {
-            // Left pane — raw diagram text
-            TextEditor(text: .constant(viewModel.currentScript?.text ?? ""))
-                .font(.system(.body, design: .monospaced))
-                .disabled(true)
-                .frame(minWidth: 300)
+        @Bindable var viewModel = viewModel
 
-            // Right pane — preview
-            Group {
-                if viewModel.isGenerating {
-                    ProgressView("Generating…")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.currentScript != nil {
-                    DiagramWebView(script: viewModel.currentScript)
-                } else if viewModel.diagramMode == .sequenceDiagram && viewModel.entryPoint.isEmpty {
-                    Text("Enter an entry point (e.g. MyType.myMethod), then click Generate.")
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    Text("Select Swift source files or a folder, then click Generate.")
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            }
-            .frame(minWidth: 400)
+        HSplitView {
+            sourceEditor
+            diagramPreview
         }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button("Open…") {
-                    openPanel()
+            ToolbarItemGroup(placement: .primaryAction) {
+                openButton
+                pathSummaryText
+                modePicker(viewModel: $viewModel)
+                formatPicker(viewModel: $viewModel)
+                
+                if viewModel.diagramMode == .sequenceDiagram {
+                    sequenceControls(viewModel: $viewModel)
                 }
-            }
-
-            ToolbarItem(placement: .primaryAction) {
-                Text(pathSummary)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .frame(maxWidth: 300, alignment: .leading)
-            }
-
-            ToolbarItem(placement: .primaryAction) {
-                Picker("Mode", selection: Bindable(viewModel).diagramMode) {
-                    ForEach(DiagramMode.allCases) { mode in
-                        Text(mode.rawValue).tag(mode)
-                    }
+                
+                if viewModel.diagramMode == .dependencyGraph {
+                    dependencyControls(viewModel: $viewModel)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 360)
-            }
-
-            ToolbarItem(placement: .primaryAction) {
-                Picker("Format", selection: Bindable(viewModel).diagramFormat) {
-                    Text("PlantUML").tag(DiagramFormat.plantuml)
-                    Text("Mermaid").tag(DiagramFormat.mermaid)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 160)
-            }
-
-            // Sequence-diagram-specific controls
-            if viewModel.diagramMode == .sequenceDiagram {
-                ToolbarItem(placement: .primaryAction) {
-                    TextField("Type.method", text: Bindable(viewModel).entryPoint)
-                        .frame(width: 160)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                ToolbarItem(placement: .primaryAction) {
-                    Stepper(
-                        "Depth: \(viewModel.sequenceDepth)",
-                        value: Bindable(viewModel).sequenceDepth,
-                        in: 1...10
-                    )
-                    .frame(width: 120)
-                }
-            }
-
-            // Dependency-graph-specific controls
-            if viewModel.diagramMode == .dependencyGraph {
-                ToolbarItem(placement: .primaryAction) {
-                    Picker("Deps Mode", selection: Bindable(viewModel).depsMode) {
-                        ForEach(DepsMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 160)
-                }
-            }
-
-            ToolbarItem(placement: .primaryAction) {
-                Button("Generate") {
-                    viewModel.generate()
-                }
-                .disabled(viewModel.selectedPaths.isEmpty || viewModel.isGenerating)
+                
+                generateButton
             }
         }
     }
+
+    // MARK: - Subviews
+
+    private var sourceEditor: some View {
+        TextEditor(text: .constant(viewModel.currentScript?.text ?? ""))
+            .font(.system(.body, design: .monospaced))
+            .disabled(true)
+            .frame(minWidth: 300)
+    }
+
+    private var diagramPreview: some View {
+        Group {
+            if viewModel.isGenerating {
+                ProgressView("Generating…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.currentScript != nil {
+                DiagramWebView(script: viewModel.currentScript)
+            } else {
+                placeholderText
+            }
+        }
+        .frame(minWidth: 400)
+    }
+
+    private var placeholderText: some View {
+        let message = viewModel.diagramMode == .sequenceDiagram && viewModel.entryPoint.isEmpty
+            ? "Enter an entry point (e.g. MyType.myMethod), then click Generate."
+            : "Select Swift source files or a folder, then click Generate."
+        
+        return Text(message)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Toolbar Items
+
+    private var openButton: some View {
+        Button("Open…", systemImage: "folder") {
+            openPanel()
+        }
+        .help("Open Swift files or directories")
+    }
+
+    private var pathSummaryText: some View {
+        Text(pathSummary)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .frame(maxWidth: 300, alignment: .leading)
+    }
+
+    private func modePicker(viewModel: Bindable<DiagramViewModel>) -> some View {
+        Picker("Mode", selection: viewModel.diagramMode) {
+            ForEach(DiagramMode.allCases) { mode in
+                Text(mode.rawValue).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 360)
+    }
+
+    private func formatPicker(viewModel: Bindable<DiagramViewModel>) -> some View {
+        Picker("Format", selection: viewModel.diagramFormat) {
+            Text("PlantUML").tag(DiagramFormat.plantuml)
+            Text("Mermaid").tag(DiagramFormat.mermaid)
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 160)
+    }
+
+    @ViewBuilder
+    private func sequenceControls(viewModel: Bindable<DiagramViewModel>) -> some View {
+        TextField("Type.method", text: viewModel.entryPoint)
+            .frame(width: 160)
+            .textFieldStyle(.roundedBorder)
+
+        Stepper(
+            "Depth: \(viewModel.sequenceDepth)",
+            value: viewModel.sequenceDepth,
+            in: 1...10
+        )
+        .frame(width: 120)
+    }
+
+    private func dependencyControls(viewModel: Bindable<DiagramViewModel>) -> some View {
+        Picker("Deps Mode", selection: viewModel.depsMode) {
+            ForEach(DepsMode.allCases, id: \.self) { mode in
+                Text(mode.rawValue).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 160)
+    }
+
+    private var generateButton: some View {
+        Button("Generate", systemImage: "play.fill") {
+            viewModel.generate()
+        }
+        .keyboardShortcut("r", modifiers: .command)
+        .disabled(viewModel.selectedPaths.isEmpty || viewModel.isGenerating)
+    }
+
+    // MARK: - Logic
 
     private var pathSummary: String {
         switch viewModel.selectedPaths.count {
