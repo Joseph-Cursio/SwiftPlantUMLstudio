@@ -14,11 +14,20 @@ import SwiftUMLBridgeFramework
 struct DiagramWebView: NSViewRepresentable {
     var script: (any DiagramOutputting)?
 
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
     func makeNSView(context: Context) -> WKWebView {
-        WKWebView()
+        let webView = WKWebView()
+        webView.setValue(false, forKey: "drawsBackground") // Allow transparency
+        return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
+        let newText = script?.text ?? ""
+        guard newText != context.coordinator.lastLoadedText else { return }
+        context.coordinator.lastLoadedText = newText
         updateWebView(webView)
     }
 
@@ -42,6 +51,41 @@ struct DiagramWebView: NSViewRepresentable {
 
     func mermaidHTML(_ text: String) -> String {
         // swiftlint:disable:next line_length
-        "<html><body style=\"background:white; padding:20px;\"><script src=\"https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js\"></script><script>mermaid.initialize({ startOnLoad: true, theme: 'default' });</script><div class=\"mermaid\">\(text)</div></body></html>"
+        """
+        <html>
+        <head>
+            <style>
+                body {
+                    background: transparent;
+                    padding: 20px;
+                    margin: 0;
+                    display: flex;
+                    justify-content: center;
+                }
+                @media (prefers-color-scheme: dark) {
+                    .mermaid { background-color: transparent !important; }
+                }
+            </style>
+        </head>
+        <body>
+            <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+            <script>
+                const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                mermaid.initialize({
+                    startOnLoad: true,
+                    theme: isDark ? 'dark' : 'default',
+                    securityLevel: 'loose'
+                });
+            </script>
+            <div class="mermaid">
+                \(text)
+            </div>
+        </body>
+        </html>
+        """
+    }
+
+    class Coordinator {
+        var lastLoadedText: String = ""
     }
 }

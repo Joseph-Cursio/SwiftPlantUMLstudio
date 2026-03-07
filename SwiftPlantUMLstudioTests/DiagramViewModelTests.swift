@@ -50,18 +50,11 @@ final class DiagramViewModelTests: XCTestCase {
         
         XCTAssertTrue(viewModel.isGenerating)
         
-        let expectation = XCTestExpectation(description: "Generate class diagram")
-        
-        // Poll for completion
+        // Wait for generation to complete
         for _ in 0..<50 {
-            if !viewModel.isGenerating {
-                expectation.fulfill()
-                break
-            }
-            try await Task.sleep(nanoseconds: 200_000_000) // 0.2s
+            if !viewModel.isGenerating { break }
+            try await Task.sleep(nanoseconds: 100_000_000) // 0.1s
         }
-        
-        await fulfillment(of: [expectation], timeout: 10.0)
         
         XCTAssertFalse(viewModel.isGenerating)
         XCTAssertNotNil(viewModel.script)
@@ -80,17 +73,10 @@ final class DiagramViewModelTests: XCTestCase {
         
         XCTAssertTrue(viewModel.isGenerating)
         
-        let expectation = XCTestExpectation(description: "Generate dependency graph")
-        
         for _ in 0..<50 {
-            if !viewModel.isGenerating {
-                expectation.fulfill()
-                break
-            }
-            try await Task.sleep(nanoseconds: 200_000_000) // 0.2s
+            if !viewModel.isGenerating { break }
+            try await Task.sleep(nanoseconds: 100_000_000) // 0.1s
         }
-        
-        await fulfillment(of: [expectation], timeout: 10.0)
         
         XCTAssertFalse(viewModel.isGenerating)
         XCTAssertNotNil(viewModel.depsScript)
@@ -110,17 +96,10 @@ final class DiagramViewModelTests: XCTestCase {
         
         XCTAssertTrue(viewModel.isGenerating)
         
-        let expectation = XCTestExpectation(description: "Generate sequence diagram")
-        
         for _ in 0..<50 {
-            if !viewModel.isGenerating {
-                expectation.fulfill()
-                break
-            }
-            try await Task.sleep(nanoseconds: 200_000_000) // 0.2s
+            if !viewModel.isGenerating { break }
+            try await Task.sleep(nanoseconds: 100_000_000) // 0.1s
         }
-        
-        await fulfillment(of: [expectation], timeout: 10.0)
         
         XCTAssertFalse(viewModel.isGenerating)
         XCTAssertNotNil(viewModel.sequenceScript)
@@ -129,18 +108,12 @@ final class DiagramViewModelTests: XCTestCase {
 
     func testGenerateWithEmptyPaths() {
         let viewModel = DiagramViewModel()
-        viewModel.selectedPaths = []
-        
-        viewModel.generate()
-        XCTAssertFalse(viewModel.isGenerating)
-        
-        viewModel.diagramMode = .sequenceDiagram
-        viewModel.generate()
-        XCTAssertFalse(viewModel.isGenerating)
-        
-        viewModel.diagramMode = .dependencyGraph
-        viewModel.generate()
-        XCTAssertFalse(viewModel.isGenerating)
+        for mode in DiagramMode.allCases {
+            viewModel.selectedPaths = []
+            viewModel.diagramMode = mode
+            viewModel.generate()
+            XCTAssertFalse(viewModel.isGenerating, "Should not generate for mode \(mode) with empty paths")
+        }
     }
 
     func testGenerateSequenceWithInvalidEntryPoint() {
@@ -150,14 +123,11 @@ final class DiagramViewModelTests: XCTestCase {
         viewModel.selectedPaths = [fileURL.path]
         viewModel.diagramMode = .sequenceDiagram
         
-        // Missing entry point
-        viewModel.entryPoint = ""
-        viewModel.generate()
-        XCTAssertFalse(viewModel.isGenerating)
-        
-        // Invalid format (no dot)
-        viewModel.entryPoint = "A"
-        viewModel.generate()
-        XCTAssertFalse(viewModel.isGenerating)
+        let invalidPoints = ["", "JustType", "Type.method.extra"]
+        for point in invalidPoints {
+            viewModel.entryPoint = point
+            viewModel.generate()
+            XCTAssertFalse(viewModel.isGenerating, "Should not generate for invalid entry point: \(point)")
+        }
     }
 }

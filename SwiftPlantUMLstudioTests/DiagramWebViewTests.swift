@@ -83,6 +83,34 @@ final class DiagramWebViewTests: XCTestCase {
         XCTAssertNotNil(webView)
     }
     
+    func testMakeCoordinator() {
+        let view = DiagramWebView(script: nil)
+        let coordinator = view.makeCoordinator()
+        XCTAssertEqual(coordinator.lastLoadedText, "")
+    }
+
+    func testUpdateNSViewPreventsRedundantReloads() {
+        let view = DiagramWebView(script: nil)
+        let webView = WKWebView()
+        let coordinator = view.makeCoordinator()
+        let context = unsafeBitCast(coordinator, to: DiagramWebView.Context.self)
+        
+        // First update
+        view.updateNSView(webView, context: context)
+        XCTAssertEqual(coordinator.lastLoadedText, "")
+        
+        // Update with script
+        let generator = ClassDiagramGenerator()
+        let script = generator.generateScript(for: [], with: Configuration.default)
+        let viewWithScript = DiagramWebView(script: script)
+        viewWithScript.updateNSView(webView, context: context)
+        XCTAssertEqual(coordinator.lastLoadedText, script.text)
+        
+        // Redundant update
+        viewWithScript.updateNSView(webView, context: context)
+        XCTAssertEqual(coordinator.lastLoadedText, script.text)
+    }
+
     func testMermaidHTML() {
         let view = DiagramWebView(script: nil)
         let html = view.mermaidHTML("graph TD; A-->B")
