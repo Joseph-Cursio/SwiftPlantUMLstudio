@@ -597,7 +597,6 @@
 			productName = SwiftUMLBridgeFramework;
 		};
 /* End XCSwiftPackageProductDependency section */
-
 	};
 	rootObject = 70ABC7592F50824400A8F630 /* Project object */;
 }

@@ -16,10 +16,10 @@ final class DiagramViewModel {
     var script: DiagramScript?
     var sequenceScript: SequenceScript?
     var depsScript: DepsScript?
-    
+
     // For restoring from history without needing to re-parse AST
     private var restoredScript: SimpleDiagramScript?
-    
+
     var isGenerating: Bool = false
     var errorMessage: String?
     var diagramFormat: DiagramFormat = .plantuml
@@ -45,7 +45,7 @@ final class DiagramViewModel {
 
     var currentScript: (any DiagramOutputting)? {
         if let restoredScript { return restoredScript }
-        
+
         switch diagramMode {
         case .classDiagram: return script
         case .sequenceDiagram: return sequenceScript
@@ -71,10 +71,10 @@ final class DiagramViewModel {
         errorMessage = nil
         selectedHistoryItem = nil
         restoredScript = nil
-        
+
         currentTask = Task { [weak self] in
             guard let self else { return }
-            
+
             // Debounce: wait for a short period before starting expensive AST parsing
             // to handle rapid-fire setting changes smoothly.
             try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
@@ -111,19 +111,19 @@ final class DiagramViewModel {
     func loadDiagram(_ entity: DiagramEntity) {
         let modeString = entity.mode ?? ""
         let formatString = entity.format ?? ""
-        
+
         diagramMode = DiagramMode(rawValue: modeString) ?? .classDiagram
         diagramFormat = DiagramFormat(rawValue: formatString) ?? .plantuml
-        
+
         if diagramMode == .sequenceDiagram {
             entryPoint = entity.entryPoint ?? ""
             refreshEntryPoints()
         } else if diagramMode == .dependencyGraph {
             depsMode = DepsMode(rawValue: entity.entryPoint ?? "") ?? .types
         }
-        
+
         sequenceDepth = Int(entity.sequenceDepth)
-        
+
         if let pathsData = entity.paths,
            let paths = try? JSONDecoder().decode([String].self, from: pathsData) {
             selectedPaths = paths
@@ -180,7 +180,7 @@ final class DiagramViewModel {
             availableEntryPoints = []
             return
         }
-        
+
         // This is fast enough to do on the main actor since it's just syntax scanning
         // without full type checking or SourceKit XPC.
         availableEntryPoints = SequenceDiagramGenerator().findEntryPoints(for: selectedPaths)
@@ -188,23 +188,23 @@ final class DiagramViewModel {
 
     private func saveToHistory() {
         guard let currentScript = currentScript else { return }
-        
+
         let entity = DiagramEntity(context: context)
         entity.id = UUID()
         entity.timestamp = Date()
         entity.mode = diagramMode.rawValue
         entity.format = diagramFormat.rawValue
-        
+
         if diagramMode == .sequenceDiagram {
             entity.entryPoint = entryPoint
         } else if diagramMode == .dependencyGraph {
             entity.entryPoint = depsMode.rawValue
         }
-        
+
         entity.sequenceDepth = Int16(sequenceDepth)
         entity.scriptText = currentScript.text
         entity.paths = try? JSONEncoder().encode(selectedPaths)
-        
+
         // Generate a descriptive name
         if let firstPath = selectedPaths.first {
             let filename = URL(fileURLWithPath: firstPath).lastPathComponent
@@ -216,27 +216,27 @@ final class DiagramViewModel {
         } else {
             entity.name = "Untitled Diagram"
         }
-        
+
         try? context.save()
         loadHistory()
     }
 
     private func generateClassDiagram() async {
-        guard !selectedPaths.isEmpty else { 
+        guard !selectedPaths.isEmpty else {
             isGenerating = false
-            return 
+            return
         }
         script = nil
 
         let paths = selectedPaths
         let format = diagramFormat
-        
+
         let result = await Task.detached(priority: .userInitiated) {
             var config = Configuration.default
             config.format = format
             return ClassDiagramGenerator().generateScript(for: paths, with: config)
         }.value
-        
+
         guard !Task.isCancelled else { return }
         script = result
     }
@@ -251,13 +251,13 @@ final class DiagramViewModel {
         let paths = selectedPaths
         let format = diagramFormat
         let mode = depsMode
-        
+
         let result = await Task.detached(priority: .userInitiated) {
             var config = Configuration.default
             config.format = format
             return DependencyGraphGenerator().generateScript(for: paths, mode: mode, with: config)
         }.value
-        
+
         guard !Task.isCancelled else { return }
         depsScript = result
     }
@@ -280,7 +280,7 @@ final class DiagramViewModel {
         let paths = selectedPaths
         let format = diagramFormat
         let depth = sequenceDepth
-        
+
         let result = await Task.detached(priority: .userInitiated) {
             var config = Configuration.default
             config.format = format
@@ -292,7 +292,7 @@ final class DiagramViewModel {
                 with: config
             )
         }.value
-        
+
         guard !Task.isCancelled else { return }
         sequenceScript = result
     }

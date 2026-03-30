@@ -29,7 +29,8 @@ struct DiagramWebView: View {
                 WebView(mermaidPage)
                     .task(id: script?.text) {
                         guard let text = script?.text, !text.isEmpty else { return }
-                        _ = mermaidPage.load(html: MermaidHTMLBuilder.mermaidHTML(text), baseURL: URL(string: "about:blank")!)
+                        let html = MermaidHTMLBuilder.mermaidHTML(text)
+                        _ = mermaidPage.load(html: html, baseURL: URL(string: "about:blank")!)
                     }
             case nil:
                 EmptyView()

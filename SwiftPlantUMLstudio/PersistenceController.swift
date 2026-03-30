@@ -10,35 +10,35 @@ import CoreData
 /// A modern Core Data stack manager.
 @MainActor
 struct PersistenceController {
-    private class PersistenceController_Helper {}
+    private class PersistenceControllerHelper {}
 
     static let shared = PersistenceController()
 
     static let managedObjectModel: NSManagedObjectModel = {
         let modelName = "SwiftPlantUMLstudio"
         let bundleID = "name.JosephCursio.SwiftPlantUMLstudio"
-        
+
         var model: NSManagedObjectModel?
-        
+
         // 1. Try by bundle ID
         if let appBundle = Bundle(identifier: bundleID),
            let modelURL = appBundle.url(forResource: modelName, withExtension: "momd") {
             model = NSManagedObjectModel(contentsOf: modelURL)
         }
-        
+
         // 2. Try bundle for helper class
         if model == nil {
-            let bundle = Bundle(for: PersistenceController_Helper.self)
+            let bundle = Bundle(for: PersistenceControllerHelper.self)
             if let modelURL = bundle.url(forResource: modelName, withExtension: "momd") {
                 model = NSManagedObjectModel(contentsOf: modelURL)
             }
         }
-        
+
         // 3. Try Bundle.main
         if model == nil, let modelURL = Bundle.main.url(forResource: modelName, withExtension: "momd") {
             model = NSManagedObjectModel(contentsOf: modelURL)
         }
-        
+
         // 4. Fallback to allBundles
         if model == nil {
             for bundle in Bundle.allBundles {
@@ -60,7 +60,7 @@ struct PersistenceController {
     init(inMemory: Bool = false) {
         let modelName = "SwiftPlantUMLstudio"
         container = NSPersistentContainer(name: modelName, managedObjectModel: Self.managedObjectModel)
-        
+
         if inMemory {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
         } else {
