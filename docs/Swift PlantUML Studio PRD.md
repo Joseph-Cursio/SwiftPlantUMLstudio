@@ -301,7 +301,7 @@ The CLI is a thin wrapper over the framework, enabling third-party integration.
 
 - Should v1 support .xcframework parsing?
 - How should macro-generated code be handled?
-- Should fixes be upstreamed to SwiftPlantUML or diverge immediately?
+- ~~Should fixes be upstreamed to SwiftPlantUML or diverge immediately?~~ **Closed** — SwiftUMLBridge is a ground-up rewrite with no shared code; upstreaming is not applicable.
 - Is there demand for a VS Code extension?
 
 ---
