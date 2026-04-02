@@ -7,6 +7,7 @@ final class DashboardUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
+        app.launchArguments += ["-appMode", "Developer"]
         app.launch()
     }
 

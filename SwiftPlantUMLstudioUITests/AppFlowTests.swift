@@ -5,6 +5,7 @@ final class AppFlowTests: XCTestCase {
     @MainActor
     func testMainUIElements() throws {
         let app = XCUIApplication()
+        app.launchArguments += ["-appMode", "Developer"]
         app.launch()
 
         // Sidebar
@@ -52,6 +53,7 @@ final class AppFlowTests: XCTestCase {
     @MainActor
     func testSidebarHistory() throws {
         let app = XCUIApplication()
+        app.launchArguments += ["-appMode", "Developer"]
         app.launch()
 
         let historySection = app.staticTexts["History"]

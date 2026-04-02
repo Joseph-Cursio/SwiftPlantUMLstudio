@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  SwiftPlantUMLstudio
-//
-//  Created by joe cursio on 2/26/26.
-//
-
 import SwiftUI
 import SwiftUMLBridgeFramework
 import UniformTypeIdentifiers
@@ -13,42 +6,15 @@ struct ContentView: View {
     @Environment(SubscriptionManager.self) private var subscriptionManager
     @State private var viewModel = DiagramViewModel()
     @State private var showPaywall = false
+    @AppStorage("appMode") private var appMode: AppMode = .explorer
 
     var body: some View {
-        @Bindable var viewModel = viewModel
-
-        NavigationSplitView {
-            VStack(spacing: 0) {
-                FileBrowserSidebar(viewModel: viewModel)
-                Divider()
-                HistorySidebar(viewModel: viewModel)
-            }
-            .navigationSplitViewColumnWidth(min: 200, ideal: 250)
-        } content: {
-            sourceEditor
-                .navigationSplitViewColumnWidth(min: 300, ideal: 400)
-                .navigationTitle(viewModel.selectedFileURL?.lastPathComponent ?? "Source")
-        } detail: {
-            DiagramDetailView(viewModel: viewModel)
-        }
-        // 1 400 px minimum ensures all toolbar items are visible without overflow.
-        .frame(minWidth: 1400)
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                openButton
-                pathSummaryText
-                modePicker(viewModel: $viewModel)
-                formatPicker(viewModel: $viewModel)
-
-                if viewModel.diagramMode == .sequenceDiagram {
-                    SequenceControlsView(viewModel: viewModel)
-                }
-
-                if viewModel.diagramMode == .dependencyGraph {
-                    dependencyControls(viewModel: $viewModel)
-                }
-
-                generateButton
+        Group {
+            switch appMode {
+            case .explorer:
+                explorerLayout
+            case .developer:
+                developerLayout
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openFile)) { _ in
@@ -57,7 +23,6 @@ struct ContentView: View {
         .task {
             viewModel.loadHistory()
         }
-        // Automatic generation triggers on any configuration change
         .onChange(of: viewModel.selectedPaths) {
             viewModel.rebuildFileTree()
             viewModel.generate()
@@ -96,8 +61,132 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Subviews
+    // MARK: - Explorer Layout
 
+    private var explorerLayout: some View {
+        NavigationSplitView {
+            ExplorerSidebar(viewModel: viewModel)
+                .navigationSplitViewColumnWidth(min: 250, ideal: 320)
+        } detail: {
+            ExplorerDetailView(viewModel: viewModel)
+        }
+        .frame(minWidth: 900)
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                ExplorerToolbar(
+                    pathSummary: viewModel.pathSummary,
+                    appMode: $appMode,
+                    onOpen: openPanel,
+                    onSave: viewModel.save,
+                    saveDisabled: viewModel.currentScript == nil || viewModel.isGenerating
+                )
+            }
+        }
+    }
+
+    // MARK: - Developer Layout
+
+    private var developerLayout: some View {
+        @Bindable var bindableVM = viewModel
+
+        return NavigationSplitView {
+            VStack(spacing: 0) {
+                FileBrowserSidebar(viewModel: viewModel)
+                Divider()
+                HistorySidebar(viewModel: viewModel)
+            }
+            .navigationSplitViewColumnWidth(min: 200, ideal: 250)
+        } content: {
+            SourceEditorView(
+                content: viewModel.selectedFileContent,
+                hasSelection: viewModel.selectedFileURL != nil
+            )
+            .navigationSplitViewColumnWidth(min: 300, ideal: 400)
+            .navigationTitle(viewModel.selectedFileURL?.lastPathComponent ?? "Source")
+        } detail: {
+            DiagramDetailView(viewModel: viewModel)
+        }
+        .frame(minWidth: 1400)
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button("Open…", systemImage: "folder", action: openPanel)
+                    .help("Open Swift files or directories (⌘O)")
+
+                Text(viewModel.pathSummary)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: 300, alignment: .leading)
+
+                Picker("Mode", selection: $bindableVM.diagramMode) {
+                    ForEach(DiagramMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 360)
+                .accessibilityIdentifier("modePicker")
+
+                Picker("Format", selection: $bindableVM.diagramFormat) {
+                    Text("PlantUML").tag(DiagramFormat.plantuml)
+                    Text("Mermaid").tag(DiagramFormat.mermaid)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 160)
+
+                if viewModel.diagramMode == .sequenceDiagram {
+                    SequenceControlsView(viewModel: viewModel)
+                }
+
+                if viewModel.diagramMode == .dependencyGraph {
+                    Picker("Deps Mode", selection: $bindableVM.depsMode) {
+                        ForEach(DepsMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 160)
+                    .accessibilityIdentifier("depsModeControl")
+                }
+
+                Picker("App Mode", selection: $appMode) {
+                    ForEach(AppMode.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 200)
+                .accessibilityIdentifier("appModePicker")
+
+                Button("Save", systemImage: "square.and.arrow.down") {
+                    viewModel.save()
+                }
+                .keyboardShortcut("s", modifiers: .command)
+                .help("Save to history (⌘S)")
+                .disabled(viewModel.currentScript == nil || viewModel.isGenerating)
+            }
+        }
+    }
+
+    // MARK: - Logic
+
+    private func openPanel() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = true
+        panel.allowedContentTypes = [.swiftSource]
+        panel.canSelectHiddenExtension = true
+
+        guard panel.runModal() == .OK else { return }
+        viewModel.selectedPaths = panel.urls.map { $0.path() }
+        viewModel.generate()
+    }
+}
+
+// MARK: - Subviews
+
+extension ContentView {
     struct HistoryItemRow: View {
         let item: DiagramEntity
         var body: some View {
@@ -126,85 +215,6 @@ struct ContentView: View {
             }
             return mode
         }
-    }
-
-    private var sourceEditor: some View {
-        SourceEditorView(
-            content: viewModel.selectedFileContent,
-            hasSelection: viewModel.selectedFileURL != nil
-        )
-    }
-
-    // MARK: - Toolbar Items
-
-    private var openButton: some View {
-        Button("Open…", systemImage: "folder") {
-            openPanel()
-        }
-        .help("Open Swift files or directories (⌘O)")
-    }
-
-    private var pathSummaryText: some View {
-        Text(viewModel.pathSummary)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-            .truncationMode(.middle)
-            .frame(maxWidth: 300, alignment: .leading)
-    }
-
-    private func modePicker(viewModel: Bindable<DiagramViewModel>) -> some View {
-        Picker("Mode", selection: viewModel.diagramMode) {
-            ForEach(DiagramMode.allCases) { mode in
-                Text(mode.rawValue).tag(mode)
-            }
-        }
-        .pickerStyle(.segmented)
-        .frame(width: 360)
-        .accessibilityIdentifier("modePicker")
-    }
-
-    private func formatPicker(viewModel: Bindable<DiagramViewModel>) -> some View {
-        Picker("Format", selection: viewModel.diagramFormat) {
-            Text("PlantUML").tag(DiagramFormat.plantuml)
-            Text("Mermaid").tag(DiagramFormat.mermaid)
-        }
-        .pickerStyle(.segmented)
-        .frame(width: 160)
-    }
-
-    private func dependencyControls(viewModel: Bindable<DiagramViewModel>) -> some View {
-        Picker("Deps Mode", selection: viewModel.depsMode) {
-            ForEach(DepsMode.allCases, id: \.self) { mode in
-                Text(mode.rawValue).tag(mode)
-            }
-        }
-        .pickerStyle(.segmented)
-        .frame(width: 160)
-        .accessibilityIdentifier("depsModeControl")
-    }
-
-    private var generateButton: some View {
-        Button("Save", systemImage: "square.and.arrow.down") {
-            viewModel.save()
-        }
-        .keyboardShortcut("s", modifiers: .command)
-        .help("Save to history (⌘S)")
-        .disabled(viewModel.currentScript == nil || viewModel.isGenerating)
-    }
-
-    // MARK: - Logic
-
-    private func openPanel() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = true
-        panel.allowedContentTypes = [.swiftSource]
-        panel.canSelectHiddenExtension = true
-
-        guard panel.runModal() == .OK else { return }
-        viewModel.selectedPaths = panel.urls.map { $0.path() }
-        viewModel.generate()
     }
 }
 
