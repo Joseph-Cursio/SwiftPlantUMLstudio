@@ -12,6 +12,7 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @Environment(SubscriptionManager.self) private var subscriptionManager
     @State private var viewModel = DiagramViewModel()
+    @State private var showPaywall = false
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -68,6 +69,18 @@ struct ContentView: View {
             viewModel.selectFile(viewModel.selectedFileURL)
         }
         .onChange(of: viewModel.diagramMode) {
+            if viewModel.diagramMode == .sequenceDiagram
+                && !FeatureGate.isUnlocked(.sequenceDiagrams, manager: subscriptionManager) {
+                viewModel.diagramMode = .classDiagram
+                showPaywall = true
+                return
+            }
+            if viewModel.diagramMode == .dependencyGraph
+                && !FeatureGate.isUnlocked(.dependencyGraphs, manager: subscriptionManager) {
+                viewModel.diagramMode = .classDiagram
+                showPaywall = true
+                return
+            }
             viewModel.generate()
             if viewModel.diagramMode == .sequenceDiagram && !viewModel.selectedPaths.isEmpty {
                 viewModel.refreshEntryPoints()
@@ -77,6 +90,9 @@ struct ContentView: View {
         .onChange(of: viewModel.entryPoint) { viewModel.generate() }
         .onChange(of: viewModel.sequenceDepth) { viewModel.generate() }
         .onChange(of: viewModel.depsMode) { viewModel.generate() }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(subscriptionManager: subscriptionManager)
+        }
     }
 
     // MARK: - Subviews
