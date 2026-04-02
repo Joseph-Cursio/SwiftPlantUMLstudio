@@ -1,0 +1,102 @@
+import Foundation
+
+struct Insight: Identifiable {
+    let identifier = UUID()
+    let icon: String
+    let title: String
+    let description: String
+    let severity: Severity
+
+    var id: UUID { identifier }
+
+    enum Severity {
+        case info
+        case noteworthy
+        case warning
+    }
+}
+
+enum InsightEngine {
+    static func generate(from summary: ProjectSummary) -> [Insight] {
+        var insights: [Insight] = []
+
+        // Cycle warnings
+        if !summary.cycleWarnings.isEmpty {
+            let names = summary.cycleWarnings.prefix(3).joined(separator: ", ")
+            let suffix = summary.cycleWarnings.count > 3 ? " and \(summary.cycleWarnings.count - 3) more" : ""
+            insights.append(Insight(
+                icon: "exclamationmark.triangle.fill",
+                title: "Circular dependencies detected",
+                description: "\(names)\(suffix) are involved in dependency cycles.",
+                severity: .warning
+            ))
+        }
+
+        // High-connectivity types
+        for top in summary.topConnectedTypes where top.connectionCount >= 5 {
+            insights.append(Insight(
+                icon: "link.circle.fill",
+                title: "\(top.name) is a critical dependency",
+                description: "Used by \(top.connectionCount) other types — changes here have wide impact.",
+                severity: .noteworthy
+            ))
+        }
+
+        // Type composition overview
+        if summary.totalTypes > 0 {
+            let parts = summary.typeBreakdown
+                .sorted { $0.value > $1.value }
+                .map { "\($0.value) \($0.key.lowercased())" }
+                .joined(separator: ", ")
+            insights.append(Insight(
+                icon: "chart.pie.fill",
+                title: "Project composition",
+                description: "Your project has \(parts).",
+                severity: .info
+            ))
+        }
+
+        // Protocol count
+        let protocolCount = summary.typeBreakdown["Protocols"] ?? 0
+        if protocolCount >= 3 {
+            insights.append(Insight(
+                icon: "checklist",
+                title: "\(protocolCount) protocols found",
+                description: "See how your types conform to shared interfaces.",
+                severity: .info
+            ))
+        }
+
+        // Entry points available
+        if !summary.entryPoints.isEmpty {
+            insights.append(Insight(
+                icon: "play.circle.fill",
+                title: "\(summary.entryPoints.count) methods available for tracing",
+                description: "You can trace execution flows through your code.",
+                severity: .info
+            ))
+        }
+
+        // Module imports
+        if summary.moduleImports.count >= 2 {
+            insights.append(Insight(
+                icon: "shippingbox.fill",
+                title: "\(summary.moduleImports.count) external modules imported",
+                description: "See how your project's modules depend on each other.",
+                severity: .info
+            ))
+        }
+
+        // No relationships
+        if summary.totalRelationships == 0 && summary.totalTypes > 0 {
+            insights.append(Insight(
+                icon: "circle.dashed",
+                title: "No type relationships found",
+                description: "Your types appear to be independent — no inheritance or conformance detected.",
+                severity: .info
+            ))
+        }
+
+        return insights
+    }
+}
