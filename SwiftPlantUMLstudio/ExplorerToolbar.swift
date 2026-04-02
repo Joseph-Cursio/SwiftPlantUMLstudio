@@ -28,9 +28,7 @@ struct ExplorerToolbar: View {
         .frame(width: 200)
         .accessibilityIdentifier("appModePicker")
 
-        Button("Save to History", systemImage: "bookmark") {
-            onSave()
-        }
+        Button("Save to History", systemImage: "bookmark", action: onSave)
         .keyboardShortcut("s", modifiers: .command)
         .help("Save to history (⌘S)")
         .disabled(saveDisabled)

@@ -42,7 +42,7 @@ struct ExplorerSidebar: View {
                     ContentUnavailableView("No history yet", systemImage: "clock")
                 } else {
                     ForEach(viewModel.history) { item in
-                        ContentView.HistoryItemRow(item: item)
+                        HistoryItemRow(item: item)
                             .tag(item)
                             .contextMenu {
                                 Button("Delete", role: .destructive) {

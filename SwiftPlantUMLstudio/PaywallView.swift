@@ -28,6 +28,7 @@ struct PaywallView: View {
             Image(systemName: "star.circle.fill")
                 .font(.system(size: 48))
                 .foregroundStyle(.yellow)
+                .accessibilityHidden(true)
             Text("Upgrade to Pro")
                 .font(.title.bold())
             Text("Unlock the full power of SwiftPlantUML Studio")
@@ -53,6 +54,7 @@ struct PaywallView: View {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(.green)
                 .font(.title3)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.body.bold())
