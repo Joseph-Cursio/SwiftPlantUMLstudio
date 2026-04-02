@@ -19,20 +19,27 @@ struct Insight: Identifiable {
 enum InsightEngine {
     static func generate(from summary: ProjectSummary) -> [Insight] {
         var insights: [Insight] = []
+        appendWarnings(from: summary, to: &insights)
+        appendStructureInsights(from: summary, to: &insights)
+        appendFeatureInsights(from: summary, to: &insights)
+        return insights
+    }
 
-        // Cycle warnings
+    // MARK: - Warning-level insights
+
+    private static func appendWarnings(from summary: ProjectSummary, to insights: inout [Insight]) {
         if !summary.cycleWarnings.isEmpty {
             let names = summary.cycleWarnings.prefix(3).joined(separator: ", ")
-            let suffix = summary.cycleWarnings.count > 3 ? " and \(summary.cycleWarnings.count - 3) more" : ""
+            let extra = summary.cycleWarnings.count > 3
+                ? " and \(summary.cycleWarnings.count - 3) more" : ""
             insights.append(Insight(
                 icon: "exclamationmark.triangle.fill",
                 title: "Circular dependencies detected",
-                description: "\(names)\(suffix) are involved in dependency cycles.",
+                description: "\(names)\(extra) are involved in dependency cycles.",
                 severity: .warning
             ))
         }
 
-        // High-connectivity types
         for top in summary.topConnectedTypes where top.connectionCount >= 5 {
             insights.append(Insight(
                 icon: "link.circle.fill",
@@ -41,8 +48,11 @@ enum InsightEngine {
                 severity: .noteworthy
             ))
         }
+    }
 
-        // Type composition overview
+    // MARK: - Structure insights
+
+    private static func appendStructureInsights(from summary: ProjectSummary, to insights: inout [Insight]) {
         if summary.totalTypes > 0 {
             let parts = summary.typeBreakdown
                 .sorted { $0.value > $1.value }
@@ -56,7 +66,6 @@ enum InsightEngine {
             ))
         }
 
-        // Protocol count
         let protocolCount = summary.typeBreakdown["Protocols"] ?? 0
         if protocolCount >= 3 {
             insights.append(Insight(
@@ -67,7 +76,19 @@ enum InsightEngine {
             ))
         }
 
-        // Entry points available
+        if summary.totalRelationships == 0 && summary.totalTypes > 0 {
+            insights.append(Insight(
+                icon: "circle.dashed",
+                title: "No type relationships found",
+                description: "Your types appear to be independent — no inheritance or conformance detected.",
+                severity: .info
+            ))
+        }
+    }
+
+    // MARK: - Feature insights
+
+    private static func appendFeatureInsights(from summary: ProjectSummary, to insights: inout [Insight]) {
         if !summary.entryPoints.isEmpty {
             insights.append(Insight(
                 icon: "play.circle.fill",
@@ -77,7 +98,6 @@ enum InsightEngine {
             ))
         }
 
-        // Module imports
         if summary.moduleImports.count >= 2 {
             insights.append(Insight(
                 icon: "shippingbox.fill",
@@ -86,17 +106,5 @@ enum InsightEngine {
                 severity: .info
             ))
         }
-
-        // No relationships
-        if summary.totalRelationships == 0 && summary.totalTypes > 0 {
-            insights.append(Insight(
-                icon: "circle.dashed",
-                title: "No type relationships found",
-                description: "Your types appear to be independent — no inheritance or conformance detected.",
-                severity: .info
-            ))
-        }
-
-        return insights
     }
 }

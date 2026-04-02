@@ -16,6 +16,6 @@ enum MacroConformanceTable: Sendable {
         // Observation framework (Swift 5.9+ / iOS 17+)
         "Observable": ["Observable"],
         // SwiftData
-        "Model": ["Observable", "PersistentModel"],
+        "Model": ["Observable", "PersistentModel"]
     ]
 }

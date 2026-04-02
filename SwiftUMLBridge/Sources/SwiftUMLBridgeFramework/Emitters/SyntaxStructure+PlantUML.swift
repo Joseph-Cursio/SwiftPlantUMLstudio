@@ -78,7 +78,8 @@ extension SyntaxStructure {
         let genericsStr = generics ?? ""
         let body = members(context: context)
         let macroAnnotation = attributeNames.map { " <<\($0)>>" }.joined()
-        return "class \"\(displayName ?? name ?? "unknown")\" as \(alias)\(genericsStr) \(stereotype)\(macroAnnotation) { \(body) \n}"
+        let typeName = displayName ?? name ?? "unknown"
+        return "class \"\(typeName)\" as \(alias)\(genericsStr) \(stereotype)\(macroAnnotation) { \(body) \n}"
     }
 
     func addLinking(context: DiagramContext) {

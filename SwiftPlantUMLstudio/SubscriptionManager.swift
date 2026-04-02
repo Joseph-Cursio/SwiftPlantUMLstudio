@@ -91,7 +91,9 @@ final class SubscriptionManager {
         }
     }
 
-    private nonisolated static func checkVerified<PayloadType>(_ result: VerificationResult<PayloadType>) throws -> PayloadType {
+    private nonisolated static func checkVerified<PayloadType>(
+        _ result: VerificationResult<PayloadType>
+    ) throws -> PayloadType {
         switch result {
         case .verified(let payload):
             return payload
