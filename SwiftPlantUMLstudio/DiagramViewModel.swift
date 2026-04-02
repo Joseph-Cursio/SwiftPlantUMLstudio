@@ -36,6 +36,11 @@ final class DiagramViewModel {
     var history: [DiagramEntity] = []
     var selectedHistoryItem: DiagramEntity?
 
+    // Dashboard
+    var projectSummary: ProjectSummary?
+    var insights: [Insight] = []
+    var suggestions: [DiagramSuggestion] = []
+
     private var currentTask: Task<Void, Never>?
     private let context: NSManagedObjectContext
 
@@ -162,6 +167,25 @@ final class DiagramViewModel {
             if let firstURL = FileNode.allLeafURLs(from: fileTree).first {
                 selectFile(firstURL)
             }
+        }
+    }
+
+    func analyzeProject(isProUnlocked: Bool = true) {
+        guard !selectedPaths.isEmpty else {
+            projectSummary = nil
+            insights = []
+            suggestions = []
+            return
+        }
+        let paths = selectedPaths
+        let proUnlocked = isProUnlocked
+        Task {
+            let summary = ProjectAnalyzer.analyze(paths: paths)
+            let newInsights = InsightEngine.generate(from: summary)
+            let newSuggestions = SuggestionEngine.generate(from: summary, isProUnlocked: proUnlocked)
+            projectSummary = summary
+            insights = newInsights
+            suggestions = newSuggestions
         }
     }
 

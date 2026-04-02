@@ -29,7 +29,7 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 300, ideal: 400)
                 .navigationTitle(viewModel.selectedFileURL?.lastPathComponent ?? "Source")
         } detail: {
-            DiagramDetailView(viewModel: viewModel)
+            DiagramDetailView(viewModel: viewModel, subscriptionManager: subscriptionManager)
         }
         // 1 400 px minimum ensures all toolbar items are visible without overflow.
         .frame(minWidth: 1400)
@@ -61,6 +61,7 @@ struct ContentView: View {
         .onChange(of: viewModel.selectedPaths) {
             viewModel.rebuildFileTree()
             viewModel.generate()
+            viewModel.analyzeProject(isProUnlocked: subscriptionManager.isProUnlocked)
             if viewModel.diagramMode == .sequenceDiagram {
                 viewModel.refreshEntryPoints()
             }
@@ -274,16 +275,28 @@ struct HistorySidebar: View {
 // MARK: - Detail Pane
 
 struct DiagramDetailView: View {
-    let viewModel: DiagramViewModel
-    @State private var selectedTab: DetailTab = .preview
+    @Bindable var viewModel: DiagramViewModel
+    let subscriptionManager: SubscriptionManager
+    @State private var selectedTab: DetailTab = .dashboard
+    @State private var showPaywall = false
 
     enum DetailTab: String, CaseIterable {
+        case dashboard = "Dashboard"
         case preview = "Preview"
         case markup = "Markup"
     }
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            ProjectDashboardView(
+                summary: viewModel.projectSummary,
+                insights: viewModel.insights,
+                suggestions: viewModel.suggestions,
+                onSuggestionTap: handleSuggestion
+            )
+            .tabItem { Label("Dashboard", systemImage: "chart.bar") }
+            .tag(DetailTab.dashboard)
+
             DiagramPreviewView(viewModel: viewModel)
                 .tabItem { Label("Preview", systemImage: "eye") }
                 .tag(DetailTab.preview)
@@ -293,6 +306,28 @@ struct DiagramDetailView: View {
                 .tag(DetailTab.markup)
         }
         .accessibilityIdentifier("detailTabs")
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(subscriptionManager: subscriptionManager)
+        }
+    }
+
+    private func handleSuggestion(_ suggestion: DiagramSuggestion) {
+        if suggestion.requiresPro && !FeatureGate.isUnlocked(.sequenceDiagrams, manager: subscriptionManager) {
+            showPaywall = true
+            return
+        }
+        switch suggestion.action {
+        case .classDiagram:
+            viewModel.diagramMode = .classDiagram
+        case .sequenceDiagram(let entryPoint):
+            viewModel.diagramMode = .sequenceDiagram
+            viewModel.entryPoint = entryPoint
+        case .dependencyGraph(let mode):
+            viewModel.diagramMode = .dependencyGraph
+            viewModel.depsMode = mode
+        }
+        viewModel.generate()
+        selectedTab = .preview
     }
 }
 
