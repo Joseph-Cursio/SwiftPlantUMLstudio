@@ -182,7 +182,7 @@ struct DiagramViewModelFileBrowserTests {
             let viewModel = DiagramViewModel(persistenceController: PersistenceController(inMemory: true))
             viewModel.selectedPaths = [dir.path()]
             viewModel.rebuildFileTree()
-            #expect(!viewModel.fileTree.isEmpty)
+            #expect(viewModel.fileTree.isEmpty == false)
         }
     }
 
@@ -199,7 +199,7 @@ struct DiagramViewModelFileBrowserTests {
             viewModel.selectedPaths = [dir.path()]
             viewModel.rebuildFileTree()
             #expect(viewModel.selectedFileURL != nil)
-            #expect(!viewModel.selectedFileContent.isEmpty)
+            #expect(viewModel.selectedFileContent.isEmpty == false)
         }
     }
 

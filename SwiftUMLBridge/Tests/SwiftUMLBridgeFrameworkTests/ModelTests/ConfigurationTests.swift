@@ -51,6 +51,6 @@ struct ConfigurationTests {
 
     @Test("Version current value is non-empty")
     func versionNonEmpty() {
-        #expect(!Version.current.value.isEmpty)
+        #expect(Version.current.value.isEmpty == false)
     }
 }

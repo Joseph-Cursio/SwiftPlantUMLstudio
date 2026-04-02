@@ -20,7 +20,7 @@ struct FileCollectorTests {
     @Test("getFiles(for:) on a directory returns .swift files recursively")
     func getFilesForDirectory() {
         let files = collector.getFiles(for: projectMockURL)
-        #expect(!files.isEmpty)
+        #expect(files.isEmpty == false)
         #expect(files.allSatisfy { $0.pathExtension == "swift" })
     }
 
@@ -46,13 +46,13 @@ struct FileCollectorTests {
     @Test("getFiles(for:in:) with empty paths uses directory itself")
     func getFilesEmptyPaths() {
         let files = collector.getFiles(for: [], in: projectMockURL.path)
-        #expect(!files.isEmpty)
+        #expect(files.isEmpty == false)
     }
 
     @Test("getFiles(for:in:) with '.' uses directory")
     func getFilesWithDotPath() {
         let files = collector.getFiles(for: ["."], in: projectMockURL.path)
-        #expect(!files.isEmpty)
+        #expect(files.isEmpty == false)
     }
 
     @Test("getFiles(for:in:) with absolute path returns files at that path")
@@ -78,7 +78,7 @@ struct FileCollectorTests {
             in: projectMockURL.path,
             honoring: nil
         )
-        #expect(!files.isEmpty)
+        #expect(files.isEmpty == false)
     }
 
     @Test("getFiles with empty include and exclude returns all files")
@@ -89,7 +89,7 @@ struct FileCollectorTests {
             in: projectMockURL.path,
             honoring: opts
         )
-        #expect(!files.isEmpty)
+        #expect(files.isEmpty == false)
     }
 
     @Test("getFiles with include pattern filters to matching files only")
@@ -101,7 +101,7 @@ struct FileCollectorTests {
             in: projectMockURL.path,
             honoring: opts
         )
-        #expect(!files.isEmpty)
+        #expect(files.isEmpty == false)
         #expect(files.allSatisfy { $0.lastPathComponent.hasPrefix("Mock") })
     }
 

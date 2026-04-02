@@ -240,7 +240,7 @@ struct MermaidHTMLBuilderTests {
     @Test("mermaidHTML escapes XSS injection attempt")
     func mermaidHTMLEscapesInjection() {
         let html = MermaidHTMLBuilder.mermaidHTML("</div><script>evil()</script>")
-        #expect(!html.contains("<script>evil()"))
+        #expect(html.contains("<script>evil()") == false)
         #expect(html.contains("&lt;/div&gt;&lt;script&gt;evil()&lt;/script&gt;"))
     }
 }

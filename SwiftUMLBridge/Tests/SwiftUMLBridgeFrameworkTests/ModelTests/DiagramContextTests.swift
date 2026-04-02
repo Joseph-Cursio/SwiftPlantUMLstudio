@@ -175,7 +175,7 @@ struct DiagramContextTests {
         ctx.addLinking(item: child, parent: parent)
         let conn = ctx.connections.first ?? ""
         #expect(conn.contains("Collection"))
-        #expect(!conn.contains("<Element>"))
+        #expect(conn.contains("<Element>") == false)
     }
 
     // MARK: - collectNestedTypeConnections

@@ -18,13 +18,13 @@ struct MermaidScriptTests {
     @Test("no @startuml in Mermaid output")
     func noStartuml() {
         let script = DiagramScript(items: [], configuration: mermaidConfig)
-        #expect(!script.text.contains("@startuml"))
+        #expect(script.text.contains("@startuml") == false)
     }
 
     @Test("no @enduml in Mermaid output")
     func noEnduml() {
         let script = DiagramScript(items: [], configuration: mermaidConfig)
-        #expect(!script.text.contains("@enduml"))
+        #expect(script.text.contains("@enduml") == false)
     }
 
     @Test("class node appears in Mermaid output")

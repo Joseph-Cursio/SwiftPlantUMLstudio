@@ -115,7 +115,7 @@ struct MermaidGenerationTests {
         )
         let source = "class InternalCache {} \nclass PublicAPI {}"
         let script = generator.generateScript(for: source, with: config)
-        #expect(!script.text.contains("InternalCache"))
+        #expect(script.text.contains("InternalCache") == false)
         #expect(script.text.contains("PublicAPI"))
     }
 
@@ -147,7 +147,7 @@ struct MermaidGenerationTests {
         )
         let source = "class Outer { class Inner {} }"
         let script = generator.generateScript(for: source, with: config)
-        #expect(!script.text.contains("+--"))
+        #expect(script.text.contains("+--") == false)
     }
 
     @Test("unsupported element kind is skipped in Mermaid without crash")
@@ -190,6 +190,6 @@ struct MermaidGenerationTests {
         let source = "class Plain { var value: Int = 0 }"
         let script = generator.generateScript(for: source, with: mermaidConfig)
         #expect(script.text.contains("Plain"))
-        #expect(!script.text.contains("<<Observable>>"))
+        #expect(script.text.contains("<<Observable>>") == false)
     }
 }

@@ -35,12 +35,12 @@ struct GlobTests {
 
     @Test("pathContainsGlobSyntax returns false for plain path")
     func pathContainsPlain() {
-        #expect(!pathContainsGlobSyntax("/absolute/path/to/file.swift"))
+        #expect(pathContainsGlobSyntax("/absolute/path/to/file.swift") == false)
     }
 
     @Test("pathContainsGlobSyntax returns false for empty string")
     func pathContainsEmpty() {
-        #expect(!pathContainsGlobSyntax(""))
+        #expect(pathContainsGlobSyntax("") == false)
     }
 
     // MARK: - parseCommaDelimitedList
@@ -101,7 +101,7 @@ struct GlobTests {
     @Test("expandGlobs without glob syntax returns path globs")
     func expandGlobsNoGlobSyntax() {
         let globs = expandGlobs("Sources/Foo.swift", in: projectMockURL.path)
-        #expect(!globs.isEmpty)
+        #expect(globs.isEmpty == false)
         for glob in globs {
             switch glob {
             case .path:
@@ -115,13 +115,13 @@ struct GlobTests {
     @Test("expandGlobs with wildcard returns regex globs")
     func expandGlobsWithWildcard() {
         let globs = expandGlobs("**/*.swift", in: projectMockURL.path)
-        #expect(!globs.isEmpty)
+        #expect(globs.isEmpty == false)
     }
 
     @Test("expandGlobs handles brace expansion")
     func expandGlobsBraceExpansion() {
         let globs = expandGlobs("{Mock0,Mock1}File.swift", in: projectMockURL.path)
-        #expect(!globs.isEmpty)
+        #expect(globs.isEmpty == false)
     }
 
     @Test("expandGlobs with comma-delimited paths produces multiple globs")
@@ -147,7 +147,7 @@ struct GlobTests {
     @Test("Glob.path does not match unrelated path")
     func globPathNoMatch() {
         let glob = Glob.path("/other/path/file.swift")
-        #expect(!glob.matches("/completely/different/path.swift"))
+        #expect(glob.matches("/completely/different/path.swift") == false)
     }
 
     @Test("Glob.regex matches pattern")
@@ -156,7 +156,7 @@ struct GlobTests {
         if let regex = try? NSRegularExpression(pattern: pattern) {
             let glob = Glob.regex(regex)
             #expect(glob.matches("/path/to/file.swift"))
-            #expect(!glob.matches("/path/to/file.txt"))
+            #expect(glob.matches("/path/to/file.txt") == false)
         }
     }
 
@@ -173,7 +173,7 @@ struct GlobTests {
         let globs = expandGlobs("**/*.swift", in: "/tmp")
         for glob in globs {
             let desc = glob.description
-            #expect(!desc.isEmpty)
+            #expect(desc.isEmpty == false)
         }
     }
 
@@ -183,7 +183,7 @@ struct GlobTests {
     func matchGlobsFindsFiles() {
         let globs = expandGlobs("**/Mock*.swift", in: projectMockURL.path)
         let results = matchGlobs(globs, in: projectMockURL.path)
-        #expect(!results.isEmpty)
+        #expect(results.isEmpty == false)
         #expect(results.allSatisfy { $0.lastPathComponent.hasPrefix("Mock") })
     }
 

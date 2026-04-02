@@ -80,7 +80,7 @@ struct SequencePlantUMLTests {
     @Test("Mermaid config is not output for PlantUML format")
     func noMermaidInPlantUML() {
         let script = makeScript(edges: makeEdges())
-        #expect(!script.text.contains("sequenceDiagram"))
+        #expect(script.text.contains("sequenceDiagram") == false)
     }
 
     @Test("format property is plantuml")

@@ -44,7 +44,7 @@ struct DiagramScriptTests {
     func encodeTextNonEmpty() {
         let script = DiagramScript(items: [], configuration: .default)
         let encoded = script.encodeText()
-        #expect(!encoded.isEmpty)
+        #expect(encoded.isEmpty == false)
     }
 
     @Test("default styling includes hide empty members")

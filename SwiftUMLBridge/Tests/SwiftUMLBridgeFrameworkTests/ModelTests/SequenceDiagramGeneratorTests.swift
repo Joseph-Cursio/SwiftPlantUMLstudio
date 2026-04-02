@@ -23,7 +23,7 @@ struct SequenceDiagramGeneratorTests {
     @Test("empty paths produces script with no call arrows")
     func emptyPathsProducesNoArrows() {
         let script = generator.generateScript(for: [], entryType: "Foo", entryMethod: "run")
-        #expect(!script.text.contains("->"))
+        #expect(script.text.contains("->") == false)
     }
 
     @Test("empty paths returns plantuml format by default")
@@ -61,7 +61,7 @@ struct SequenceDiagramGeneratorTests {
         defer { try? FileManager.default.removeItem(atPath: path) }
 
         let script = generator.generateScript(for: [path], entryType: "Missing", entryMethod: "go")
-        #expect(!script.text.contains("->"))
+        #expect(script.text.contains("->") == false)
     }
 
     @Test("cross-type call appears as arrow in script")
@@ -105,7 +105,7 @@ struct SequenceDiagramGeneratorTests {
             for: [path], entryType: "A", entryMethod: "start", depth: 1
         )
         #expect(script.text.contains("step"))
-        #expect(!script.text.contains("finish"))
+        #expect(script.text.contains("finish") == false)
     }
 
     @Test("depth 2 includes two levels of calls")

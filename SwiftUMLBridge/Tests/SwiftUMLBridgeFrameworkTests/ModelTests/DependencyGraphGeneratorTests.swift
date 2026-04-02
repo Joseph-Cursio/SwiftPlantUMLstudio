@@ -89,7 +89,7 @@ struct DependencyGraphGeneratorTests {
         var config = Configuration.default
         config.elements = ElementOptions(havingAccessLevel: [.public, .open])
         let script = generator.generateScript(for: [path], mode: .types, with: config)
-        #expect(!script.text.contains("Hidden"))
+        #expect(script.text.contains("Hidden") == false)
         #expect(script.text.contains("Visible"))
     }
 

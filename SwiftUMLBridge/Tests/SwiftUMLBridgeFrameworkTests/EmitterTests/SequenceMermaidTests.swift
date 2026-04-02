@@ -34,7 +34,7 @@ struct SequenceMermaidTests {
     @Test("does not contain @startuml")
     func noStartuml() {
         let script = makeScript(edges: makeEdges())
-        #expect(!script.text.contains("@startuml"))
+        #expect(script.text.contains("@startuml") == false)
     }
 
     @Test("contains %% title comment")
@@ -85,6 +85,6 @@ struct SequenceMermaidTests {
     @Test("encodeText returns non-empty string")
     func encodeTextNonEmpty() {
         let script = makeScript(edges: makeEdges())
-        #expect(!script.encodeText().isEmpty)
+        #expect(script.encodeText().isEmpty == false)
     }
 }

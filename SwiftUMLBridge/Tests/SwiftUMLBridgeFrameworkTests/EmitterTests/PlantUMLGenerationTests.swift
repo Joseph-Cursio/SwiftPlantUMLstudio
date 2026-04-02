@@ -103,7 +103,7 @@ struct PlantUMLGenerationTests {
         )
         let source = "class InternalCache {} \nclass PublicAPI {}"
         let script = generator.generateScript(for: source, with: config)
-        #expect(!script.text.contains("InternalCache"))
+        #expect(script.text.contains("InternalCache") == false)
         #expect(script.text.contains("PublicAPI"))
     }
 
@@ -193,6 +193,6 @@ struct PlantUMLGenerationTests {
         let text = script.text
         // Should have the kind stereotype but not any macro stereotype
         #expect(text.contains("Plain"))
-        #expect(!text.contains("<<Observable>>"))
+        #expect(text.contains("<<Observable>>") == false)
     }
 }

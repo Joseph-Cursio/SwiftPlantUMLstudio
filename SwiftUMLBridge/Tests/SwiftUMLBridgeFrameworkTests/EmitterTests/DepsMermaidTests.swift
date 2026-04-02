@@ -87,7 +87,7 @@ struct DepsMermaidTests {
             DependencyEdge(from: "A", to: "B", kind: .conforms)
         ]
         let script = makeScript(edges: edges)
-        #expect(!script.text.contains("#ffcccc"))
+        #expect(script.text.contains("#ffcccc") == false)
     }
 
     // MARK: - ID sanitization

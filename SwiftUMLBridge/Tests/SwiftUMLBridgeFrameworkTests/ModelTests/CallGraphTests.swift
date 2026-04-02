@@ -111,7 +111,7 @@ struct CallGraphTests {
         let result = graph.traverse(from: "A", entryMethod: "start", maxDepth: 1)
         let methods = result.map(\.calleeMethod)
         #expect(methods.contains("step"))
-        #expect(!methods.contains("finish"))
+        #expect(methods.contains("finish") == false)
     }
 
     @Test("depth 2 includes two call levels but not the third")
@@ -126,7 +126,7 @@ struct CallGraphTests {
         let methods = result.map(\.calleeMethod)
         #expect(methods.contains("b"))
         #expect(methods.contains("c"))
-        #expect(!methods.contains("d"))
+        #expect(methods.contains("d") == false)
     }
 
     // MARK: - Cycle detection
@@ -166,7 +166,7 @@ struct CallGraphTests {
         let result = graph.traverse(from: "Foo", entryMethod: "run", maxDepth: 5)
         let methods = result.map(\.calleeMethod)
         #expect(methods.contains("unknown"))
-        #expect(!methods.contains("secret"))
+        #expect(methods.contains("secret") == false)
     }
 
     @Test("resolved and unresolved edges from same caller both appear")

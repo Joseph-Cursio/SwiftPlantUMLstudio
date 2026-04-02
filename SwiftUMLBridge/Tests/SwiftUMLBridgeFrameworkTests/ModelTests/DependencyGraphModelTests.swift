@@ -87,7 +87,7 @@ struct DependencyGraphModelTests {
         // B and C are in a cycle; D and A feed into the cycle but are not in it
         #expect(cycles.contains("B"))
         #expect(cycles.contains("C"))
-        #expect(!cycles.contains("D"))
+        #expect(cycles.contains("D") == false)
     }
 
     // MARK: - edges property

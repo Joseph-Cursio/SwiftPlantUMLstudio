@@ -87,7 +87,7 @@ struct DepsPlantUMLTests {
             DependencyEdge(from: "A", to: "B", kind: .conforms)
         ]
         let script = makeScript(edges: edges)
-        #expect(!script.text.contains("CyclicDependencies"))
+        #expect(script.text.contains("CyclicDependencies") == false)
     }
 
     // MARK: - encodeText
@@ -100,6 +100,6 @@ struct DepsPlantUMLTests {
             DependencyEdge(from: "TypeB\(num)", to: "TypeC\(num)", kind: .inherits)
         ]}
         let script = makeScript(edges: edges)
-        #expect(!script.encodeText().isEmpty)
+        #expect(script.encodeText().isEmpty == false)
     }
 }

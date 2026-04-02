@@ -80,11 +80,11 @@ struct DiagramViewModelHistoryIntegrationTests {
             let entityToDelete = try #require(viewModel.history.first { $0.name == "To Be Deleted" })
             viewModel.deleteHistoryItem(entityToDelete)
 
-            #expect(!viewModel.history.contains { $0.name == "To Be Deleted" })
+            #expect(viewModel.history.contains { $0.name == "To Be Deleted" } == false)
 
             let request = DiagramEntity.fetchRequest()
             let remaining = try context.fetch(request)
-            #expect(!remaining.contains { $0.name == "To Be Deleted" })
+            #expect(remaining.contains { $0.name == "To Be Deleted" } == false)
         }
     }
 
@@ -252,7 +252,7 @@ struct DiagramGenerationPipelineTests {
 
         let script = try #require(viewModel.currentScript)
         #expect(script.format == .plantuml)
-        #expect(!script.text.isEmpty)
+        #expect(script.text.isEmpty == false)
         #expect(script.text.contains("@startuml"))
         #expect(script.text.contains("@enduml"))
         #expect(script.text.contains("Controller.handleRequest"))
@@ -285,7 +285,7 @@ struct DiagramGenerationPipelineTests {
 
         let script = try #require(viewModel.currentScript)
         #expect(script.format == .plantuml)
-        #expect(!script.text.isEmpty)
+        #expect(script.text.isEmpty == false)
         #expect(script.text.contains("Foundation"))
         #expect(script.text.contains("Combine"))
     }
