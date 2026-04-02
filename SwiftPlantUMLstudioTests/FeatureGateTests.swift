@@ -1,0 +1,51 @@
+import Foundation
+import Testing
+@testable import SwiftPlantUMLstudio
+
+// MARK: - GCD dispatch helpers
+
+private func runOnMain(_ block: @MainActor () -> Void) {
+    if Thread.isMainThread {
+        MainActor.assumeIsolated(block)
+    } else {
+        DispatchQueue.main.sync { MainActor.assumeIsolated(block) }
+    }
+}
+
+// MARK: - ProFeature Tests
+
+@Suite("ProFeature")
+struct ProFeatureTests {
+
+    @Test("has five cases")
+    func allCasesCount() {
+        #expect(ProFeature.allCases.count == 5)
+    }
+
+    @Test("includes expected features")
+    func expectedCases() {
+        let cases = Set(ProFeature.allCases)
+        #expect(cases.contains(.sequenceDiagrams))
+        #expect(cases.contains(.dependencyGraphs))
+        #expect(cases.contains(.exportMarkup))
+        #expect(cases.contains(.formatSelection))
+        #expect(cases.contains(.unlimitedProjects))
+    }
+}
+
+// MARK: - FeatureGate Tests
+
+@Suite("FeatureGate")
+struct FeatureGateTests {
+
+    @Test("all features unlocked when Pro is active")
+    func proUnlockedAllFeatures() {
+        runOnMain {
+            let manager = SubscriptionManager()
+            // Default state: isProUnlocked is true (dev mode)
+            for feature in ProFeature.allCases {
+                #expect(FeatureGate.isUnlocked(feature, manager: manager))
+            }
+        }
+    }
+}
