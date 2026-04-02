@@ -21,12 +21,14 @@ struct ProjectDashboardView: View {
                 }
                 .padding(24)
             }
+            .accessibilityIdentifier("dashboardContent")
         } else {
             ContentUnavailableView(
                 "No project loaded",
                 systemImage: "folder",
                 description: Text("Open a folder or Swift files to see project insights.")
             )
+            .accessibilityIdentifier("dashboardEmpty")
         }
     }
 
