@@ -10,6 +10,7 @@ import SwiftUMLBridgeFramework
 import UniformTypeIdentifiers
 
 struct ContentView: View {
+    @Environment(SubscriptionManager.self) private var subscriptionManager
     @State private var viewModel = DiagramViewModel()
 
     var body: some View {

@@ -32,6 +32,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct SwiftPlantUMLstudioApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var subscriptionManager = SubscriptionManager()
 
     var body: some Scene {
         WindowGroup {
@@ -42,6 +43,7 @@ struct SwiftPlantUMLstudioApp: App {
                 EmptyView()
             } else {
                 ContentView()
+                    .environment(subscriptionManager)
             }
         }
         .defaultSize(width: 1500, height: 700)
