@@ -59,7 +59,8 @@ extension SyntaxStructure {
         let alias = context.uniqName(item: self, relationship: relationship)
         let genericsStr = generics.map { " \($0)" } ?? ""
         let membersText = mermaidMembers(context: context)
-        var body = "    <<\(stereotype)>>\(genericsStr)"
+        let macroAnnotation = attributeNames.map { "\n    <<\($0)>>" }.joined()
+        var body = "    <<\(stereotype)>>\(macroAnnotation)\(genericsStr)"
         if !membersText.isEmpty {
             body += membersText
         }

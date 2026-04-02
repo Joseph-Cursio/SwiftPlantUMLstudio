@@ -77,24 +77,41 @@ extension SyntaxStructure {
         let alias = context.uniqName(item: self, relationship: relationship)
         let genericsStr = generics ?? ""
         let body = members(context: context)
-        return "class \"\(displayName ?? name ?? "unknown")\" as \(alias)\(genericsStr) \(stereotype) { \(body) \n}"
+        let macroAnnotation = attributeNames.map { " <<\($0)>>" }.joined()
+        return "class \"\(displayName ?? name ?? "unknown")\" as \(alias)\(genericsStr) \(stereotype)\(macroAnnotation) { \(body) \n}"
     }
 
     func addLinking(context: DiagramContext) {
-        if let inheritedTypes, !inheritedTypes.isEmpty {
-            inheritedTypes.forEach { parent in
-                if parent.name?.contains("&") == true {
-                    parent.name?
-                        .components(separatedBy: "&")
-                        .forEach {
-                            let name = $0.trimmingCharacters(in: .whitespacesAndNewlines)
-                            context.addLinking(item: self, parent: SyntaxStructure(name: name))
-                        }
-                } else {
-                    context.addLinking(item: self, parent: parent)
-                }
+        let effectiveTypes = effectiveInheritedTypes()
+        guard !effectiveTypes.isEmpty else { return }
+        for parent in effectiveTypes {
+            if parent.name?.contains("&") == true {
+                parent.name?
+                    .components(separatedBy: "&")
+                    .forEach {
+                        let trimmed = $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                        context.addLinking(item: self, parent: SyntaxStructure(name: trimmed))
+                    }
+            } else {
+                context.addLinking(item: self, parent: parent)
             }
         }
+    }
+
+    /// Returns inherited types augmented with synthetic conformances from macro attributes.
+    /// Existing explicit conformances are not duplicated.
+    private func effectiveInheritedTypes() -> [SyntaxStructure] {
+        let explicit = inheritedTypes ?? []
+        let explicitNames = Set(explicit.compactMap(\.name))
+
+        var synthetic: [SyntaxStructure] = []
+        for macroName in attributeNames {
+            let conformances = MacroConformanceTable.syntheticConformances(for: macroName)
+            for conformance in conformances where !explicitNames.contains(conformance) {
+                synthetic.append(SyntaxStructure(name: conformance))
+            }
+        }
+        return explicit + synthetic
     }
 
     private func members(context: DiagramContext) -> String {
