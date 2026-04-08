@@ -131,9 +131,10 @@ struct ContentView: View {
                 Picker("Format", selection: $bindableVM.diagramFormat) {
                     Text("PlantUML").tag(DiagramFormat.plantuml)
                     Text("Mermaid").tag(DiagramFormat.mermaid)
+                    Text("Nomnoml").tag(DiagramFormat.nomnoml)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 160)
+                .pickerStyle(.menu)
+                .frame(width: 120)
 
                 if viewModel.diagramMode == .sequenceDiagram {
                     SequenceControlsView(viewModel: viewModel)

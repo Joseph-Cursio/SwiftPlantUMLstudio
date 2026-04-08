@@ -28,7 +28,8 @@ public struct SequenceScript: Sendable {
             self.text = SequenceScript.buildPlantUMLText(
                 traversedEdges: traversedEdges, entryType: entryType, entryMethod: entryMethod
             )
-        case .mermaid:
+        case .mermaid, .nomnoml:
+            // nomnoml does not support sequence diagrams; fall back to Mermaid
             self.text = SequenceScript.buildMermaidText(
                 traversedEdges: traversedEdges, entryType: entryType, entryMethod: entryMethod
             )

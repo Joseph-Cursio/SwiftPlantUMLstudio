@@ -23,6 +23,8 @@ public struct DiagramScript: @unchecked Sendable {
             text = buildPlantUMLText(configuration: configuration, definitions: definitions)
         case .mermaid:
             text = buildMermaidText(configuration: configuration, definitions: definitions)
+        case .nomnoml:
+            text = buildNomnomlText(configuration: configuration, definitions: definitions)
         }
 
         BridgeLogger.shared.debug("DiagramScript created in \(Date().timeIntervalSince(methodStart)) seconds")
@@ -87,6 +89,20 @@ public struct DiagramScript: @unchecked Sendable {
         return result
     }
 
+    private func buildNomnomlText(configuration: Configuration, definitions: String) -> String {
+        var result = "#direction: down"
+        result.appendAsNewLine("#fontSize: 12")
+        result.appendAsNewLine("#spacing: 60")
+        result.appendAsNewLine("#padding: 10")
+        result.appendAsNewLine("#edges: rounded")
+        if let texts = configuration.texts {
+            if let title = texts.title { result.appendAsNewLine("// title: \(title)") }
+            if let footer = texts.footer { result.appendAsNewLine("// footer: \(footer)") }
+        }
+        result.appendAsNewLine(definitions)
+        return result
+    }
+
     /// Encode diagram text for PlantUML URL embedding
     public func encodeText() -> String {
         DiagramText(rawValue: text).encodedValue
@@ -119,6 +135,8 @@ public struct DiagramScript: @unchecked Sendable {
             return item.plantuml(context: context) ?? nil
         case .mermaid:
             return item.mermaid(context: context) ?? nil
+        case .nomnoml:
+            return item.nomnoml(context: context) ?? nil
         }
     }
 }

@@ -12,10 +12,21 @@ class DiagramContext {
     private(set) var connections: [String] = []
     private(set) var extnConnections: [String] = []
 
-    private let linkTypeInheritance = "<|--"
-    private let linkTypeRealize = "<|.."
-    private let linkTypeDependency = "<.."
-    private let linkTypeGeneric = "--"
+    private var linkTypeInheritance: String {
+        format == .nomnoml ? "-:>" : "<|--"
+    }
+
+    private var linkTypeRealize: String {
+        format == .nomnoml ? "--:>" : "<|.."
+    }
+
+    private var linkTypeDependency: String {
+        format == .nomnoml ? "-->" : "<.."
+    }
+
+    private var linkTypeGeneric: String {
+        format == .nomnoml ? "-" : "--"
+    }
 
     init(configuration: Configuration = .default) {
         self.configuration = configuration
@@ -45,9 +56,15 @@ class DiagramContext {
             linkTypeKey = linkTo + "LinkType"
         }
 
-        var connect = "\(linkTo) \(uniqElementAndTypes[linkTypeKey] ?? "--ERROR--") \(fullName)"
-        if format == .plantuml, let relStyle = relationshipStyle(for: namedConnection)?.plantuml {
-            connect += " \(relStyle)"
+        var connect: String
+        let arrow = uniqElementAndTypes[linkTypeKey] ?? "--ERROR--"
+        if format == .nomnoml {
+            connect = "[\(fullName)] \(arrow) [\(linkTo)]"
+        } else {
+            connect = "\(linkTo) \(arrow) \(fullName)"
+            if format == .plantuml, let relStyle = relationshipStyle(for: namedConnection)?.plantuml {
+                connect += " \(relStyle)"
+            }
         }
         if let relationshipLabel = relationshipLabel(for: namedConnection) {
             connect += " : \(relationshipLabel)"
@@ -95,9 +112,14 @@ class DiagramContext {
             let hasMatchingParent = uniqueNameForElement.keys
                 .first(where: { $0.name == name && $0.kind != .extension }) != nil
             if item.kind == ElementKind.extension, hasMatchingParent {
-                var connect = "\(name) \(linkTypeDependency) \(newName)"
-                if format == .plantuml, let relStyle = configuration.relationships.dependency?.style?.plantuml {
-                    connect += " \(relStyle)"
+                var connect: String
+                if format == .nomnoml {
+                    connect = "[\(newName)] \(linkTypeDependency) [\(name)]"
+                } else {
+                    connect = "\(name) \(linkTypeDependency) \(newName)"
+                    if format == .plantuml, let relStyle = configuration.relationships.dependency?.style?.plantuml {
+                        connect += " \(relStyle)"
+                    }
                 }
                 connect += " : \(configuration.relationships.dependency?.label ?? relationship)"
                 extnConnections.append(connect)
@@ -121,7 +143,7 @@ class DiagramContext {
     }
 
     func collectNestedTypeConnections(items: [SyntaxStructure]) {
-        guard format == .plantuml else { return }
+        guard format == .plantuml || format == .nomnoml else { return }
         for item in items where item.parent != nil {
             guard let name = uniqueNameForElement[item],
                   let parent = item.parent,
@@ -129,7 +151,11 @@ class DiagramContext {
             else {
                 continue
             }
-            connections.append("\(parentName) +-- \(name)")
+            if format == .nomnoml {
+                connections.append("[\(parentName)] +- [\(name)]")
+            } else {
+                connections.append("\(parentName) +-- \(name)")
+            }
         }
     }
 }

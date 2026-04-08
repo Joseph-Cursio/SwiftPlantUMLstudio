@@ -31,8 +31,16 @@ public struct BrowserPresenter: DiagramPresenting {
             }
         case .mermaid:
             url = mermaidLiveURL(for: script.text)
+        case .nomnoml:
+            url = nomnomlLiveURL(for: script.text)
         }
         _ = await MainActor.run { NSWorkspace.shared.open(url) }
+    }
+
+    private func nomnomlLiveURL(for text: String) -> URL {
+        let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        return URL(string: "https://nomnoml.com/#view/\(encoded)")
+            ?? URL(string: "https://nomnoml.com")!
     }
 
     private func mermaidLiveURL(for text: String) -> URL {

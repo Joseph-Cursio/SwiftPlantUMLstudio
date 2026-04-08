@@ -22,6 +22,8 @@ public struct DepsScript: Sendable {
             self.text = DepsScript.buildPlantUMLText(model: model, cycleNodes: cycleNodes)
         case .mermaid:
             self.text = DepsScript.buildMermaidText(model: model, cycleNodes: cycleNodes)
+        case .nomnoml:
+            self.text = DepsScript.buildNomnomlText(model: model, cycleNodes: cycleNodes)
         }
     }
 }
@@ -105,5 +107,57 @@ private extension DepsScript {
             .replacingOccurrences(of: " ", with: "_")
             .replacingOccurrences(of: ".", with: "_")
             .replacingOccurrences(of: "-", with: "_")
+    }
+}
+
+// MARK: - Nomnoml
+
+private extension DepsScript {
+    static func buildNomnomlText(model: DependencyGraphModel, cycleNodes: Set<String>) -> String {
+        var lines: [String] = [
+            "#direction: down",
+            "#fontSize: 12",
+            "#spacing: 60",
+            "#edges: rounded"
+        ]
+
+        // Emit edges: [From] arrow [To]
+        for edge in model.edges {
+            let arrow: String
+            switch edge.kind {
+            case .inherits:
+                arrow = "-:>"
+            case .conforms:
+                arrow = "--:>"
+            case .imports:
+                arrow = "-->"
+            }
+            let safeTo = nomnomlEscape(edge.to)
+            let safeFrom = nomnomlEscape(edge.from)
+            lines.append("[\(safeFrom)] \(arrow) [\(safeTo)]")
+        }
+
+        // Annotate cycle nodes
+        if !cycleNodes.isEmpty {
+            let sorted = cycleNodes.sorted()
+            lines.append("")
+            lines.append("// Cyclic nodes: \(sorted.joined(separator: ", "))")
+            // nomnoml supports custom styles for highlighting
+            for node in sorted {
+                let safeName = nomnomlEscape(node)
+                lines.append("#.warning: fill=#ffcccc stroke=#cc0000")
+                lines.append("[<warning> \(safeName)]")
+            }
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    static func nomnomlEscape(_ name: String) -> String {
+        name
+            .replacingOccurrences(of: "[", with: "(")
+            .replacingOccurrences(of: "]", with: ")")
+            .replacingOccurrences(of: "|", with: "/")
+            .replacingOccurrences(of: ";", with: ",")
     }
 }
