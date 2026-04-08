@@ -47,9 +47,20 @@ final class DiagramViewModel {
 
     private var currentTask: Task<Void, Never>?
     private let context: NSManagedObjectContext
+    private let classGenerator: any ClassDiagramGenerating
+    private let sequenceGenerator: any SequenceDiagramGenerating
+    private let depsGenerator: any DependencyGraphGenerating
 
-    init(persistenceController: PersistenceController = PersistenceController.shared) {
+    init(
+        persistenceController: PersistenceController = PersistenceController.shared,
+        classGenerator: any ClassDiagramGenerating = ClassDiagramGenerator(),
+        sequenceGenerator: any SequenceDiagramGenerating = SequenceDiagramGenerator(),
+        depsGenerator: any DependencyGraphGenerating = DependencyGraphGenerator()
+    ) {
         self.context = persistenceController.container.viewContext
+        self.classGenerator = classGenerator
+        self.sequenceGenerator = sequenceGenerator
+        self.depsGenerator = depsGenerator
     }
 
     var currentScript: (any DiagramOutputting)? {
@@ -243,7 +254,7 @@ final class DiagramViewModel {
 
         // This is fast enough to do on the main actor since it's just syntax scanning
         // without full type checking or SourceKit XPC.
-        availableEntryPoints = SequenceDiagramGenerator().findEntryPoints(for: selectedPaths)
+        availableEntryPoints = sequenceGenerator.findEntryPoints(for: selectedPaths)
     }
 
     private func saveToHistory() {
@@ -291,10 +302,11 @@ final class DiagramViewModel {
         let paths = selectedPaths
         let format = diagramFormat
 
+        let generator = classGenerator
         let result = await Task.detached(priority: .userInitiated) {
             var config = Configuration.default
             config.format = format
-            return ClassDiagramGenerator().generateScript(for: paths, with: config)
+            return generator.generateScript(for: paths, with: config)
         }.value
 
         guard !Task.isCancelled else { return }
@@ -312,10 +324,11 @@ final class DiagramViewModel {
         let format = diagramFormat
         let mode = depsMode
 
+        let generator = depsGenerator
         let result = await Task.detached(priority: .userInitiated) {
             var config = Configuration.default
             config.format = format
-            return DependencyGraphGenerator().generateScript(for: paths, mode: mode, with: config)
+            return generator.generateScript(for: paths, mode: mode, with: config)
         }.value
 
         guard !Task.isCancelled else { return }
@@ -341,10 +354,11 @@ final class DiagramViewModel {
         let format = diagramFormat
         let depth = sequenceDepth
 
+        let generator = sequenceGenerator
         let result = await Task.detached(priority: .userInitiated) {
             var config = Configuration.default
             config.format = format
-            return SequenceDiagramGenerator().generateScript(
+            return generator.generateScript(
                 for: paths,
                 entryType: entryType,
                 entryMethod: entryMethod,
