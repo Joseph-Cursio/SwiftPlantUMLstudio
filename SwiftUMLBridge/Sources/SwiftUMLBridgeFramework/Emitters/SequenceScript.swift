@@ -33,6 +33,10 @@ public struct SequenceScript: Sendable {
             self.text = SequenceScript.buildMermaidText(
                 traversedEdges: traversedEdges, entryType: entryType, entryMethod: entryMethod
             )
+        case .svg:
+            self.text = SequenceSVGRenderer.render(
+                traversedEdges: traversedEdges, entryType: entryType, entryMethod: entryMethod
+            )
         }
     }
 

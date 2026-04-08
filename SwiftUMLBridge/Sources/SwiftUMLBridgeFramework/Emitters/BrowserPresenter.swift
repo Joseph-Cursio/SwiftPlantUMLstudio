@@ -33,6 +33,11 @@ public struct BrowserPresenter: DiagramPresenting {
             url = mermaidLiveURL(for: script.text)
         case .nomnoml:
             url = nomnomlLiveURL(for: script.text)
+        case .svg:
+            // SVG is self-contained; write to temp file and open
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("diagram.svg")
+            try? script.text.write(to: tempURL, atomically: true, encoding: .utf8)
+            url = tempURL
         }
         _ = await MainActor.run { NSWorkspace.shared.open(url) }
     }

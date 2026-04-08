@@ -25,6 +25,8 @@ public struct DiagramScript: @unchecked Sendable {
             text = buildMermaidText(configuration: configuration, definitions: definitions)
         case .nomnoml:
             text = buildNomnomlText(configuration: configuration, definitions: definitions)
+        case .svg:
+            text = buildSVGText(items: items, configuration: configuration)
         }
 
         BridgeLogger.shared.debug("DiagramScript created in \(Date().timeIntervalSince(methodStart)) seconds")
@@ -137,6 +139,15 @@ public struct DiagramScript: @unchecked Sendable {
             return item.mermaid(context: context) ?? nil
         case .nomnoml:
             return item.nomnoml(context: context) ?? nil
+        case .svg:
+            // SVG uses LayoutGraphBuilder directly; skip per-item text emission
+            return nil
         }
+    }
+
+    private func buildSVGText(items: [SyntaxStructure], configuration: Configuration) -> String {
+        let graph = LayoutGraphBuilder.buildClassDiagram(from: items, configuration: configuration)
+        let positioned = DagreLayoutEngine.layout(graph)
+        return SVGRenderer.render(positioned)
     }
 }

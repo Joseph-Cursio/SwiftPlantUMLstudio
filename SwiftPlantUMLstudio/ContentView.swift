@@ -133,6 +133,7 @@ struct ContentView: View {
                     Text("PlantUML").tag(DiagramFormat.plantuml)
                     Text("Mermaid").tag(DiagramFormat.mermaid)
                     Text("Nomnoml").tag(DiagramFormat.nomnoml)
+                    Text("SVG").tag(DiagramFormat.svg)
                 }
                 .pickerStyle(.menu)
                 .frame(width: 120)

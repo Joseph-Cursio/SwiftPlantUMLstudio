@@ -24,6 +24,8 @@ public struct DepsScript: Sendable {
             self.text = DepsScript.buildMermaidText(model: model, cycleNodes: cycleNodes)
         case .nomnoml:
             self.text = DepsScript.buildNomnomlText(model: model, cycleNodes: cycleNodes)
+        case .svg:
+            self.text = DepsScript.buildSVGText(model: model)
         }
     }
 }
@@ -107,6 +109,16 @@ private extension DepsScript {
             .replacingOccurrences(of: " ", with: "_")
             .replacingOccurrences(of: ".", with: "_")
             .replacingOccurrences(of: "-", with: "_")
+    }
+}
+
+// MARK: - SVG
+
+private extension DepsScript {
+    static func buildSVGText(model: DependencyGraphModel) -> String {
+        let graph = LayoutGraphBuilder.buildDependencyGraph(from: model)
+        let positioned = DagreLayoutEngine.layout(graph)
+        return SVGRenderer.render(positioned)
     }
 }
 

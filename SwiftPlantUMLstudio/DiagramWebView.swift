@@ -29,10 +29,23 @@ struct DiagramWebView: View {
                 localWebView(html: MermaidHTMLBuilder.mermaidHTML(script?.text ?? ""))
             case .nomnoml:
                 localWebView(html: NomnomlHTMLBuilder.nomnomlHTML(script?.text ?? ""))
+            case .svg:
+                localWebView(html: svgHTML(script?.text ?? ""))
             case nil:
                 EmptyView()
             }
         }
+    }
+
+    /// Wraps raw SVG in a minimal HTML page with pan/zoom support.
+    private func svgHTML(_ svg: String) -> String {
+        """
+        <html>
+        <body style="background:white; margin:0; padding:20px; overflow:auto;">
+        \(svg)
+        </body>
+        </html>
+        """
     }
 
     private func localWebView(html: String) -> some View {

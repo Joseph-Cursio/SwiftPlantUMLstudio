@@ -13,19 +13,19 @@ class DiagramContext {
     private(set) var extnConnections: [String] = []
 
     private var linkTypeInheritance: String {
-        format == .nomnoml ? "-:>" : "<|--"
+        (format == .nomnoml || format == .svg) ? "-:>" : "<|--"
     }
 
     private var linkTypeRealize: String {
-        format == .nomnoml ? "--:>" : "<|.."
+        (format == .nomnoml || format == .svg) ? "--:>" : "<|.."
     }
 
     private var linkTypeDependency: String {
-        format == .nomnoml ? "-->" : "<.."
+        (format == .nomnoml || format == .svg) ? "-->" : "<.."
     }
 
     private var linkTypeGeneric: String {
-        format == .nomnoml ? "-" : "--"
+        (format == .nomnoml || format == .svg) ? "-" : "--"
     }
 
     init(configuration: Configuration = .default) {
@@ -58,7 +58,7 @@ class DiagramContext {
 
         var connect: String
         let arrow = uniqElementAndTypes[linkTypeKey] ?? "--ERROR--"
-        if format == .nomnoml {
+        if format == .nomnoml || format == .svg {
             connect = "[\(fullName)] \(arrow) [\(linkTo)]"
         } else {
             connect = "\(linkTo) \(arrow) \(fullName)"
@@ -113,7 +113,7 @@ class DiagramContext {
                 .first(where: { $0.name == name && $0.kind != .extension }) != nil
             if item.kind == ElementKind.extension, hasMatchingParent {
                 var connect: String
-                if format == .nomnoml {
+                if format == .nomnoml || format == .svg {
                     connect = "[\(newName)] \(linkTypeDependency) [\(name)]"
                 } else {
                     connect = "\(name) \(linkTypeDependency) \(newName)"
@@ -143,7 +143,7 @@ class DiagramContext {
     }
 
     func collectNestedTypeConnections(items: [SyntaxStructure]) {
-        guard format == .plantuml || format == .nomnoml else { return }
+        guard format == .plantuml || format == .nomnoml || format == .svg else { return }
         for item in items where item.parent != nil {
             guard let name = uniqueNameForElement[item],
                   let parent = item.parent,
@@ -151,7 +151,7 @@ class DiagramContext {
             else {
                 continue
             }
-            if format == .nomnoml {
+            if format == .nomnoml || format == .svg {
                 connections.append("[\(parentName)] +- [\(name)]")
             } else {
                 connections.append("\(parentName) +-- \(name)")

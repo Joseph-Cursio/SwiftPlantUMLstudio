@@ -23,6 +23,7 @@ let package = Package(
                 .product(name: "SwiftSyntax", package: "swift-syntax"),
                 .product(name: "SwiftParser", package: "swift-syntax")
             ],
+            resources: [.copy("Resources/graphre.js")],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .executableTarget(
