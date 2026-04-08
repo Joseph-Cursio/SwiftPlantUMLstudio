@@ -1,8 +1,8 @@
 import StoreKit
 import SwiftUI
 
-struct PaywallView: View {
-    let subscriptionManager: SubscriptionManager
+struct PaywallView<Manager: SubscriptionProviding>: View {
+    let subscriptionManager: Manager
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {

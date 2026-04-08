@@ -11,7 +11,7 @@ enum ProFeature: String, CaseIterable {
 
 @MainActor
 enum FeatureGate {
-    static func isUnlocked(_ feature: ProFeature, manager: SubscriptionManager) -> Bool {
+    static func isUnlocked(_ feature: ProFeature, manager: some SubscriptionProviding) -> Bool {
         manager.isProUnlocked
     }
 }
