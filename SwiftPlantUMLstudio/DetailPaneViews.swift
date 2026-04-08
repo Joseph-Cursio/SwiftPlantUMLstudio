@@ -71,8 +71,14 @@ struct DiagramPreviewView: View {
             if viewModel.isGenerating {
                 ProgressView("Generating…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.currentScript != nil {
-                DiagramWebView(script: viewModel.currentScript)
+            } else if let script = viewModel.currentScript {
+                if script.format == .svg, let graph = script.layoutGraph {
+                    NativeDiagramView(graph: graph)
+                } else if script.format == .svg, let seqLayout = script.sequenceLayout {
+                    NativeSequenceDiagramView(layout: seqLayout)
+                } else {
+                    DiagramWebView(script: script)
+                }
             } else if viewModel.diagramMode == .sequenceDiagram && viewModel.entryPoint.isEmpty {
                 Text("Enter an entry point (e.g. MyType.myMethod) to generate a diagram.")
                     .foregroundStyle(.secondary)

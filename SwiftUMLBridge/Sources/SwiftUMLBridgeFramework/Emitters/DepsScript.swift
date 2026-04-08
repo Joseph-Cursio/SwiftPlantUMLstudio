@@ -8,6 +8,9 @@ public struct DepsScript: Sendable {
     /// The output format.
     public let format: DiagramFormat
 
+    /// Positioned layout graph (available when format is `.svg`).
+    public let layoutGraph: LayoutGraph?
+
     /// Encode diagram text for PlantUML URL embedding (same encoding as DiagramScript).
     public func encodeText() -> String {
         DiagramText(rawValue: text).encodedValue
@@ -20,12 +23,17 @@ public struct DepsScript: Sendable {
         switch configuration.format {
         case .plantuml:
             self.text = DepsScript.buildPlantUMLText(model: model, cycleNodes: cycleNodes)
+            self.layoutGraph = nil
         case .mermaid:
             self.text = DepsScript.buildMermaidText(model: model, cycleNodes: cycleNodes)
+            self.layoutGraph = nil
         case .nomnoml:
             self.text = DepsScript.buildNomnomlText(model: model, cycleNodes: cycleNodes)
+            self.layoutGraph = nil
         case .svg:
-            self.text = DepsScript.buildSVGText(model: model)
+            let result = DepsScript.buildSVGWithGraph(model: model)
+            self.text = result.text
+            self.layoutGraph = result.graph
         }
     }
 }
@@ -115,10 +123,10 @@ private extension DepsScript {
 // MARK: - SVG
 
 private extension DepsScript {
-    static func buildSVGText(model: DependencyGraphModel) -> String {
+    static func buildSVGWithGraph(model: DependencyGraphModel) -> (text: String, graph: LayoutGraph) {
         let graph = LayoutGraphBuilder.buildDependencyGraph(from: model)
         let positioned = DagreLayoutEngine.layout(graph)
-        return SVGRenderer.render(positioned)
+        return (SVGRenderer.render(positioned), positioned)
     }
 }
 

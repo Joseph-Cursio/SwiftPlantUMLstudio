@@ -8,6 +8,9 @@ public struct SequenceScript: Sendable {
     /// The output format.
     public let format: DiagramFormat
 
+    /// Positioned sequence layout (available when format is `.svg`).
+    public let sequenceLayout: SequenceLayout?
+
     /// An empty script (used when no entry point matches).
     public static let empty = SequenceScript(text: "", format: .plantuml)
 
@@ -28,21 +31,26 @@ public struct SequenceScript: Sendable {
             self.text = SequenceScript.buildPlantUMLText(
                 traversedEdges: traversedEdges, entryType: entryType, entryMethod: entryMethod
             )
+            self.sequenceLayout = nil
         case .mermaid, .nomnoml:
             // nomnoml does not support sequence diagrams; fall back to Mermaid
             self.text = SequenceScript.buildMermaidText(
                 traversedEdges: traversedEdges, entryType: entryType, entryMethod: entryMethod
             )
+            self.sequenceLayout = nil
         case .svg:
-            self.text = SequenceSVGRenderer.render(
+            let layout = SequenceSVGRenderer.computeLayout(
                 traversedEdges: traversedEdges, entryType: entryType, entryMethod: entryMethod
             )
+            self.text = SequenceSVGRenderer.renderFromLayout(layout)
+            self.sequenceLayout = layout
         }
     }
 
     private init(text: String, format: DiagramFormat) {
         self.text = text
         self.format = format
+        self.sequenceLayout = nil
     }
 }
 

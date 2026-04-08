@@ -22,25 +22,25 @@ public struct SequenceSVGRenderer: Sendable {
     private static let textColor = "#FFFFFF"
     private static let bodyTextColor = "#333333"
 
-    // MARK: - Public API
+    // MARK: - Layout Computation
 
-    /// Render a sequence diagram from traversed call edges.
-    public static func render(
+    /// Compute the positioned layout for a sequence diagram.
+    public static func computeLayout(
         traversedEdges: [CallEdge],
         entryType: String,
         entryMethod: String
-    ) -> String {
+    ) -> SequenceLayout {
         // Collect participants in order of first appearance
-        var participants: [String] = [entryType]
+        var participantNames: [String] = [entryType]
         for edge in traversedEdges {
             if !edge.isUnresolved, let calleeType = edge.calleeType,
-               !participants.contains(calleeType) {
-                participants.append(calleeType)
+               !participantNames.contains(calleeType) {
+                participantNames.append(calleeType)
             }
         }
 
         // Calculate dimensions
-        let totalWidth = leftMargin * 2 + Double(participants.count) * participantSpacing
+        let totalWidth = leftMargin * 2 + Double(participantNames.count) * participantSpacing
         let messagesStartY = topMargin + participantHeight + 20
         let totalMessages = Double(traversedEdges.count)
         let lifelinesEndY = messagesStartY + totalMessages * messageSpacing + lifelineExtension
@@ -48,13 +48,89 @@ public struct SequenceSVGRenderer: Sendable {
 
         // Map participant names to X positions (center of their column)
         var participantX: [String: Double] = [:]
-        for (idx, name) in participants.enumerated() {
+        for (idx, name) in participantNames.enumerated() {
             participantX[name] = leftMargin + Double(idx) * participantSpacing + participantSpacing / 2
         }
 
+        let boxTopY = topMargin
+        let lifelineStartY = boxTopY + participantHeight
+
+        // Build participant models
+        let participants = participantNames.map { name in
+            SequenceParticipant(
+                name: name,
+                centerX: participantX[name]!,
+                topY: boxTopY,
+                width: participantWidth,
+                height: participantHeight,
+                bottomTopY: lifelinesEndY
+            )
+        }
+
+        // Build message models
+        var messages: [SequenceMessage] = []
+        var currentY = messagesStartY
+        var lastCallee = entryType
+        for (idx, edge) in traversedEdges.enumerated() {
+            if edge.isUnresolved {
+                let noteX = participantX[lastCallee] ?? participantX[entryType]!
+                messages.append(SequenceMessage(
+                    id: idx,
+                    label: "\(edge.calleeMethod)()",
+                    fromX: noteX,
+                    toX: noteX + 60,
+                    posY: currentY,
+                    isUnresolved: true,
+                    noteText: "Unresolved: \(edge.calleeMethod)()"
+                ))
+            } else if let calleeType = edge.calleeType {
+                let fromX = participantX[edge.callerType] ?? leftMargin
+                let toX = participantX[calleeType] ?? leftMargin
+                messages.append(SequenceMessage(
+                    id: idx,
+                    label: "\(edge.calleeMethod)()",
+                    fromX: fromX,
+                    toX: toX,
+                    posY: currentY,
+                    isAsync: edge.isAsync
+                ))
+                lastCallee = calleeType
+            }
+            currentY += messageSpacing
+        }
+
+        return SequenceLayout(
+            participants: participants,
+            messages: messages,
+            title: "\(entryType).\(entryMethod)",
+            totalWidth: totalWidth,
+            totalHeight: totalHeight,
+            lifelineStartY: lifelineStartY,
+            lifelineEndY: lifelinesEndY
+        )
+    }
+
+    // MARK: - SVG Rendering
+
+    /// Render a sequence diagram from traversed call edges.
+    public static func render(
+        traversedEdges: [CallEdge],
+        entryType: String,
+        entryMethod: String
+    ) -> String {
+        let layout = computeLayout(
+            traversedEdges: traversedEdges,
+            entryType: entryType,
+            entryMethod: entryMethod
+        )
+        return renderFromLayout(layout)
+    }
+
+    /// Render SVG from a pre-computed sequence layout.
+    public static func renderFromLayout(_ layout: SequenceLayout) -> String {
         var svg = """
-        <svg xmlns="http://www.w3.org/2000/svg" width="\(Int(totalWidth))" height="\(Int(totalHeight))" \
-        viewBox="0 0 \(Int(totalWidth)) \(Int(totalHeight))" \
+        <svg xmlns="http://www.w3.org/2000/svg" width="\(Int(layout.totalWidth))" height="\(Int(layout.totalHeight))" \
+        viewBox="0 0 \(Int(layout.totalWidth)) \(Int(layout.totalHeight))" \
         style="font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;">
         <defs>
             <marker id="seq-arrow" viewBox="0 0 10 10" refX="10" refY="5" \
@@ -70,58 +146,38 @@ public struct SequenceSVGRenderer: Sendable {
         """
 
         // Title
-        svg += "<text x=\"\(Int(totalWidth / 2))\" y=\"14\" text-anchor=\"middle\" "
+        svg += "<text x=\"\(Int(layout.totalWidth / 2))\" y=\"14\" text-anchor=\"middle\" "
         svg += "font-size=\"14\" font-weight=\"bold\" fill=\"\(bodyTextColor)\">"
-        svg += "\(escapeXML(entryType)).\(escapeXML(entryMethod))</text>\n"
+        svg += "\(escapeXML(layout.title))</text>\n"
 
-        // Participant boxes (top)
-        let boxTopY = topMargin
-        for name in participants {
-            let centerX = participantX[name]!
-            svg += renderParticipantBox(name: name, centerX: centerX, topY: boxTopY)
-        }
-
-        // Lifelines
-        let lifelineStartY = boxTopY + participantHeight
-        for name in participants {
-            let centerX = participantX[name]!
-            svg += "<line x1=\"\(fmt(centerX))\" y1=\"\(fmt(lifelineStartY))\" "
-            svg += "x2=\"\(fmt(centerX))\" y2=\"\(fmt(lifelinesEndY))\" "
+        // Participant boxes (top) and lifelines
+        for participant in layout.participants {
+            svg += renderParticipantBox(
+                name: participant.name, centerX: participant.centerX, topY: participant.topY
+            )
+            // Lifeline
+            svg += "<line x1=\"\(fmt(participant.centerX))\" y1=\"\(fmt(layout.lifelineStartY))\" "
+            svg += "x2=\"\(fmt(participant.centerX))\" y2=\"\(fmt(layout.lifelineEndY))\" "
             svg += "stroke=\"\(strokeColor)\" stroke-width=\"1\" stroke-dasharray=\"4,3\"/>\n"
         }
 
         // Messages
-        var currentY = messagesStartY
-        var lastCallee = entryType
-        for edge in traversedEdges {
-            if edge.isUnresolved {
-                // Render as a note
-                let noteX = participantX[lastCallee] ?? participantX[entryType]!
-                svg += renderNote(
-                    text: "Unresolved: \(edge.calleeMethod)()",
-                    centerX: noteX + 60,
-                    posY: currentY
-                )
-            } else if let calleeType = edge.calleeType {
-                let fromX = participantX[edge.callerType] ?? leftMargin
-                let toX = participantX[calleeType] ?? leftMargin
+        for message in layout.messages {
+            if message.isUnresolved, let noteText = message.noteText {
+                svg += renderNote(text: noteText, centerX: message.toX, posY: message.posY)
+            } else {
                 svg += renderMessage(
-                    label: "\(edge.calleeMethod)()",
-                    fromX: fromX,
-                    toX: toX,
-                    posY: currentY,
-                    isAsync: edge.isAsync
+                    label: message.label, fromX: message.fromX, toX: message.toX,
+                    posY: message.posY, isAsync: message.isAsync
                 )
-                lastCallee = calleeType
             }
-            currentY += messageSpacing
         }
 
         // Participant boxes (bottom)
-        let bottomBoxY = lifelinesEndY
-        for name in participants {
-            let centerX = participantX[name]!
-            svg += renderParticipantBox(name: name, centerX: centerX, topY: bottomBoxY)
+        for participant in layout.participants {
+            svg += renderParticipantBox(
+                name: participant.name, centerX: participant.centerX, topY: participant.bottomTopY
+            )
         }
 
         svg += "\n</svg>"
@@ -169,13 +225,11 @@ public struct SequenceSVGRenderer: Sendable {
             svg += "fill=\"\(bodyTextColor)\" font-size=\"11\">"
             svg += "\(escapeXML(label))</text>\n"
         } else {
-            // Arrow line
             svg += "<line x1=\"\(fmt(fromX))\" y1=\"\(fmt(posY))\" "
             svg += "x2=\"\(fmt(toX))\" y2=\"\(fmt(posY))\" "
             svg += "stroke=\"\(strokeColor)\" stroke-width=\"1.2\"\(dashArray) "
             svg += "marker-end=\"url(#\(markerId))\"/>\n"
 
-            // Label above the arrow
             let labelX = (fromX + toX) / 2
             svg += "<text x=\"\(fmt(labelX))\" y=\"\(fmt(posY - 6))\" "
             svg += "text-anchor=\"middle\" fill=\"\(bodyTextColor)\" font-size=\"11\">"

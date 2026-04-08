@@ -8,6 +8,9 @@ public struct DiagramScript: @unchecked Sendable {
     /// Output format for this script
     public let format: DiagramFormat
 
+    /// Positioned layout graph (available when format is `.svg`).
+    public private(set) var layoutGraph: LayoutGraph?
+
     private var context: DiagramContext
 
     /// Default initializer
@@ -145,9 +148,10 @@ public struct DiagramScript: @unchecked Sendable {
         }
     }
 
-    private func buildSVGText(items: [SyntaxStructure], configuration: Configuration) -> String {
+    private mutating func buildSVGText(items: [SyntaxStructure], configuration: Configuration) -> String {
         let graph = LayoutGraphBuilder.buildClassDiagram(from: items, configuration: configuration)
         let positioned = DagreLayoutEngine.layout(graph)
+        layoutGraph = positioned
         return SVGRenderer.render(positioned)
     }
 }
