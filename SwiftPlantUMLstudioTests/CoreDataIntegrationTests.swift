@@ -260,4 +260,72 @@ struct CoreDataIntegrationTests {
             #expect(fetched.timestamp == nil)
         }
     }
+
+    // MARK: - PersistenceController Additional Tests
+
+    @Test("shared static model is the same instance across calls")
+    func managedObjectModelIsSingleton() {
+        runOnMain {
+            let model1 = PersistenceController.managedObjectModel
+            let model2 = PersistenceController.managedObjectModel
+            #expect(model1 === model2)
+        }
+    }
+
+    @Test("managed object model contains DiagramEntity entity description")
+    func modelContainsDiagramEntity() {
+        runOnMain {
+            let model = PersistenceController.managedObjectModel
+            let entityNames = model.entities.map(\.name)
+            #expect(entityNames.contains("DiagramEntity"))
+        }
+    }
+
+    @Test("managed object model contains ProjectSnapshot entity description")
+    func modelContainsProjectSnapshot() {
+        runOnMain {
+            let model = PersistenceController.managedObjectModel
+            let entityNames = model.entities.map(\.name)
+            #expect(entityNames.contains("ProjectSnapshot"))
+        }
+    }
+
+    @Test("two in-memory controllers have independent stores")
+    func independentInMemoryStores() throws {
+        try runOnMain {
+            let controller1 = PersistenceController(inMemory: true)
+            let controller2 = PersistenceController(inMemory: true)
+
+            let entity = DiagramEntity(context: controller1.container.viewContext)
+            entity.id = UUID()
+            entity.name = "Only in controller1"
+            entity.timestamp = Date()
+            try controller1.container.viewContext.save()
+
+            let request = DiagramEntity.fetchRequest()
+            let results1 = try controller1.container.viewContext.fetch(request)
+            let results2 = try controller2.container.viewContext.fetch(request)
+
+            #expect(results1.count == 1)
+            #expect(results2.count == 0)
+        }
+    }
+
+    @Test("viewContext merge policy is mergeByPropertyObjectTrump")
+    func viewContextMergePolicy() {
+        runOnMain {
+            let controller = PersistenceController(inMemory: true)
+            let policy = controller.container.viewContext.mergePolicy as? NSMergePolicy
+            #expect(policy === NSMergePolicy.mergeByPropertyObjectTrump)
+        }
+    }
+
+    @Test("in-memory store description URL is /dev/null")
+    func inMemoryStoreDescription() {
+        runOnMain {
+            let controller = PersistenceController(inMemory: true)
+            let desc = controller.container.persistentStoreDescriptions.first
+            #expect(desc?.url == URL(fileURLWithPath: "/dev/null"))
+        }
+    }
 }
