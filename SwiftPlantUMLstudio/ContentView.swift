@@ -23,6 +23,7 @@ struct ContentView: View {
         .task {
             viewModel.loadHistory()
             viewModel.loadSnapshots()
+            loadTestFixtureIfNeeded()
         }
         .onChange(of: viewModel.selectedPaths) {
             viewModel.rebuildFileTree()
@@ -171,6 +172,15 @@ struct ContentView: View {
     }
 
     // MARK: - Logic
+
+    /// Checks for a `-testFixturePath` launch argument and pre-loads it.
+    private func loadTestFixtureIfNeeded() {
+        let args = ProcessInfo.processInfo.arguments
+        guard let idx = args.firstIndex(of: "-testFixturePath"),
+              idx + 1 < args.count else { return }
+        let path = args[idx + 1]
+        viewModel.selectedPaths = [path]
+    }
 
     private func openPanel() {
         let panel = NSOpenPanel()
