@@ -99,7 +99,7 @@ struct SequenceSVGRendererRenderTests {
         )
         let lines = svg.components(separatedBy: "\n")
         let messageLines = lines.filter { $0.contains("seq-arrow-open") }
-        #expect(!messageLines.isEmpty)
+        #expect(messageLines.isEmpty == false)
     }
 
     // MARK: - render: Unresolved Notes

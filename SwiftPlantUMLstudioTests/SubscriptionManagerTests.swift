@@ -45,7 +45,7 @@ struct FeatureGateMockTests {
         runOnMain {
             let mock = MockSubscriptionProvider()
             mock.isProUnlocked = false
-            #expect(!FeatureGate.isUnlocked(feature, manager: mock))
+            #expect(FeatureGate.isUnlocked(feature, manager: mock) == false)
         }
     }
 
@@ -64,7 +64,7 @@ struct FeatureGateMockTests {
         runOnMain {
             let mock = MockSubscriptionProvider()
             mock.isProUnlocked = false
-            #expect(!FeatureGate.isUnlocked(.sequenceDiagrams, manager: mock))
+            #expect(FeatureGate.isUnlocked(.sequenceDiagrams, manager: mock) == false)
 
             mock.isProUnlocked = true
             #expect(FeatureGate.isUnlocked(.sequenceDiagrams, manager: mock))
@@ -145,7 +145,7 @@ struct MockSubscriptionProviderTests {
     func isProUnlockedDefaultsFalse() {
         runOnMain {
             let mock = MockSubscriptionProvider()
-            #expect(!mock.isProUnlocked)
+            #expect(mock.isProUnlocked == false)
         }
     }
 }

@@ -203,7 +203,7 @@ struct SVGRendererTests {
         let svg = SVGRenderer.render(graph)
 
         #expect(svg.contains("<path"))
-        #expect(!svg.contains("marker-end"))
+        #expect(svg.contains("marker-end") == false)
     }
 
     // MARK: - Edge Labels
@@ -240,7 +240,7 @@ struct SVGRendererTests {
         let svg = SVGRenderer.render(graph)
 
         #expect(svg.contains("Array&lt;Int&gt;"))
-        #expect(!svg.contains("Array<Int>"))
+        #expect(svg.contains("Array<Int>") == false)
     }
 
     // MARK: - Arrow Markers

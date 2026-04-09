@@ -162,7 +162,7 @@ struct LayoutGraphBuilderTests {
             from: [proto, ext], configuration: .default
         )
         let depEdges = graph.edges.filter { $0.style == EdgeStyle.dependency }
-        #expect(!depEdges.isEmpty)
+        #expect(depEdges.isEmpty == false)
     }
 
     // MARK: - Class Diagram: Members
