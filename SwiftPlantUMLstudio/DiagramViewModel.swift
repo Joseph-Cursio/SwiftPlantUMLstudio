@@ -88,7 +88,7 @@ final class DiagramViewModel {
         currentTask = Task { [weak self] in
             guard let self else { return }
 
-            try? await Task.sleep(nanoseconds: 300_000_000)
+            try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
 
             switch self.diagramMode {

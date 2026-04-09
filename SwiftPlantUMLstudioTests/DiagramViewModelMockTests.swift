@@ -119,7 +119,7 @@ struct DiagramViewModelMockTests {
         viewModel.diagramFormat = .plantuml
 
         viewModel.generate()
-        try await Task.sleep(nanoseconds: 500_000_000)
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(mockClass.generateCallCount == 1)
         #expect(mockClass.lastPaths == ["/tmp/Foo.swift", "/tmp/Bar.swift"])
@@ -140,7 +140,7 @@ struct DiagramViewModelMockTests {
         viewModel.diagramMode = .classDiagram
 
         viewModel.generate()
-        try await Task.sleep(nanoseconds: 500_000_000)
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(viewModel.currentScript != nil)
         #expect(viewModel.currentScript?.text == viewModel.script?.text)
@@ -163,7 +163,7 @@ struct DiagramViewModelMockTests {
         viewModel.diagramFormat = .plantuml
 
         viewModel.generate()
-        try await Task.sleep(nanoseconds: 500_000_000)
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(mockSequence.generateCallCount == 1)
         #expect(mockSequence.lastEntryType == "AppController")
@@ -188,7 +188,7 @@ struct DiagramViewModelMockTests {
         viewModel.sequenceDepth = 7
 
         viewModel.generate()
-        try await Task.sleep(nanoseconds: 500_000_000)
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(mockSequence.lastDepth == 7)
     }
@@ -209,7 +209,7 @@ struct DiagramViewModelMockTests {
         viewModel.diagramFormat = .plantuml
 
         viewModel.generate()
-        try await Task.sleep(nanoseconds: 500_000_000)
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(mockDeps.generateCallCount == 1)
         #expect(mockDeps.lastPaths == ["/tmp/Sources/"])
@@ -231,7 +231,7 @@ struct DiagramViewModelMockTests {
         viewModel.depsMode = .types
 
         viewModel.generate()
-        try await Task.sleep(nanoseconds: 500_000_000)
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(mockDeps.lastMode == .types)
     }
@@ -251,7 +251,7 @@ struct DiagramViewModelMockTests {
         viewModel.diagramFormat = .mermaid
 
         viewModel.generate()
-        try await Task.sleep(nanoseconds: 500_000_000)
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(mockClass.lastConfiguration?.format == .mermaid)
     }
@@ -269,7 +269,7 @@ struct DiagramViewModelMockTests {
         viewModel.diagramFormat = .nomnoml
 
         viewModel.generate()
-        try await Task.sleep(nanoseconds: 500_000_000)
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(mockDeps.lastConfiguration?.format == .nomnoml)
     }
@@ -288,7 +288,7 @@ struct DiagramViewModelMockTests {
         viewModel.diagramFormat = .mermaid
 
         viewModel.generate()
-        try await Task.sleep(nanoseconds: 500_000_000)
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(mockSequence.lastConfiguration?.format == .mermaid)
     }

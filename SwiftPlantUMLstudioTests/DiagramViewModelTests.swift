@@ -242,7 +242,7 @@ private func generateAndWait(
 
     // Give the Task a moment to start and run its synchronous guard checks.
     // The ViewModel now has a 300ms debounce sleep, so we must wait longer than that.
-    try? await Task.sleep(nanoseconds: 400_000_000) // 400ms
+    try? await Task.sleep(for: .milliseconds(400))
     await Task.yield()
 
     return viewModel.isGenerating
