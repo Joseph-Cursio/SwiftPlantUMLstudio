@@ -22,10 +22,10 @@ enum ReviewReminderManager {
     static func enableReminder(intervalDays: Int = 14) {
         self.intervalDays = intervalDays
 
-        let center = UNUserNotificationCenter.current()
-        center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
-            guard granted else { return }
-            Task { @MainActor in
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let granted = (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
+            if granted {
                 scheduleReminder(intervalDays: intervalDays)
             }
         }
