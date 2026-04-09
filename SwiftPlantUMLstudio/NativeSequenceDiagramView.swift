@@ -61,7 +61,7 @@ struct NativeSequenceDiagramView: View {
                 scale = lastScale * value.magnification
             }
             .onEnded { value in
-                lastScale = lastScale * value.magnification
+                lastScale *= value.magnification
                 scale = lastScale
             }
     }
@@ -74,11 +74,8 @@ struct NativeSequenceDiagramView: View {
                     height: lastOffset.height + value.translation.height
                 )
             }
-            .onEnded { value in
-                lastOffset = CGSize(
-                    width: lastOffset.width + value.translation.width,
-                    height: lastOffset.height + value.translation.height
-                )
+            .onEnded { _ in
+                lastOffset = offset
             }
     }
 

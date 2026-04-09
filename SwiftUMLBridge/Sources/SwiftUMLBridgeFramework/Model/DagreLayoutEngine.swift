@@ -81,60 +81,57 @@ public struct DagreLayoutEngine: Sendable {
         (function() {
             var Graph = graphre.graphlib.Graph;
             var layout = graphre.layout;
-
             var graph = new Graph({ directed: true, compound: false, multigraph: false });
             graph.setGraph({ rankdir: "TB", nodesep: 60, ranksep: 60, marginx: 20, marginy: 20 });
             graph.setDefaultEdgeLabel(function() { return {}; });
 
         """
+        script += buildNodeStatements(for: graph)
+        script += buildEdgeStatements(for: graph)
+        script += layoutAndSerialize
+        return script
+    }
 
-        // Add nodes
+    private static func buildNodeStatements(for graph: LayoutGraph) -> String {
+        var result = ""
         for node in graph.nodes {
             let escapedId = node.id.replacingOccurrences(of: "\"", with: "\\\"")
-            script += "    graph.setNode(\"\(escapedId)\", { width: \(node.width), height: \(node.height) });\n"
+            result += "    graph.setNode(\"\(escapedId)\", { width: \(node.width), height: \(node.height) });\n"
         }
+        return result
+    }
 
-        // Add edges
+    private static func buildEdgeStatements(for graph: LayoutGraph) -> String {
+        var result = ""
         for (idx, edge) in graph.edges.enumerated() {
             let escapedSrc = edge.sourceId.replacingOccurrences(of: "\"", with: "\\\"")
             let escapedTgt = edge.targetId.replacingOccurrences(of: "\"", with: "\\\"")
-            script += "    graph.setEdge(\"\(escapedSrc)\", \"\(escapedTgt)\", { id: \"e\(idx)\" });\n"
+            result += "    graph.setEdge(\"\(escapedSrc)\", \"\(escapedTgt)\", { id: \"e\(idx)\" });\n"
         }
+        return result
+    }
 
-        script += """
+    private static let layoutAndSerialize = """
 
             layout(graph);
-
             var nodes = {};
             graph.nodes().forEach(function(v) {
                 var n = graph.node(v);
                 if (n) nodes[v] = { x: n.x, y: n.y, width: n.width, height: n.height };
             });
-
             var edges = [];
             graph.edges().forEach(function(e) {
                 var edge = graph.edge(e);
                 if (edge && edge.points) {
-                    edges.push({
-                        source: e.v,
-                        target: e.w,
-                        points: edge.points.map(function(p) { return { x: p.x, y: p.y }; })
-                    });
+                    edges.push({ source: e.v, target: e.w,
+                        points: edge.points.map(function(p) { return { x: p.x, y: p.y }; }) });
                 }
             });
-
             var graphInfo = graph.graph();
-            return JSON.stringify({
-                nodes: nodes,
-                edges: edges,
-                width: graphInfo.width || 800,
-                height: graphInfo.height || 600
-            });
+            return JSON.stringify({ nodes: nodes, edges: edges,
+                width: graphInfo.width || 800, height: graphInfo.height || 600 });
         })();
         """
-
-        return script
-    }
 
     // MARK: - Result Parsing
 

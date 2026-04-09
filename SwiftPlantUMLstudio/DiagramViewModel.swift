@@ -45,11 +45,11 @@ final class DiagramViewModel {
     var snapshots: [ProjectSnapshot] = []
     var architectureDiff: ArchitectureDiff?
 
-    private var currentTask: Task<Void, Never>?
-    private let context: NSManagedObjectContext
-    private let classGenerator: any ClassDiagramGenerating
-    private let sequenceGenerator: any SequenceDiagramGenerating
-    private let depsGenerator: any DependencyGraphGenerating
+    var currentTask: Task<Void, Never>?
+    let context: NSManagedObjectContext
+    let classGenerator: any ClassDiagramGenerating
+    let sequenceGenerator: any SequenceDiagramGenerating
+    let depsGenerator: any DependencyGraphGenerating
 
     init(
         persistenceController: PersistenceController = PersistenceController.shared,
@@ -257,119 +257,6 @@ final class DiagramViewModel {
         availableEntryPoints = sequenceGenerator.findEntryPoints(for: selectedPaths)
     }
 
-    private func saveToHistory() {
-        guard let currentScript = currentScript else { return }
-
-        let entity = DiagramEntity(context: context)
-        entity.id = UUID()
-        entity.timestamp = Date()
-        entity.mode = diagramMode.rawValue
-        entity.format = diagramFormat.rawValue
-
-        if diagramMode == .sequenceDiagram {
-            entity.entryPoint = entryPoint
-        } else if diagramMode == .dependencyGraph {
-            entity.entryPoint = depsMode.rawValue
-        }
-
-        entity.sequenceDepth = Int16(sequenceDepth)
-        entity.scriptText = currentScript.text
-        entity.paths = try? JSONEncoder().encode(selectedPaths)
-
-        // Generate a descriptive name
-        if let firstPath = selectedPaths.first {
-            let filename = URL(fileURLWithPath: firstPath).lastPathComponent
-            if selectedPaths.count > 1 {
-                entity.name = "\(filename) + \(selectedPaths.count - 1)"
-            } else {
-                entity.name = filename
-            }
-        } else {
-            entity.name = "Untitled Diagram"
-        }
-
-        try? context.save()
-        loadHistory()
-    }
-
-    private func generateClassDiagram() async {
-        guard !selectedPaths.isEmpty else {
-            isGenerating = false
-            return
-        }
-        script = nil
-
-        let paths = selectedPaths
-        let format = diagramFormat
-
-        let generator = classGenerator
-        let result = await Task.detached(priority: .userInitiated) {
-            var config = Configuration.default
-            config.format = format
-            return generator.generateScript(for: paths, with: config)
-        }.value
-
-        guard !Task.isCancelled else { return }
-        script = result
-    }
-
-    private func generateDependencyGraph() async {
-        guard !selectedPaths.isEmpty else {
-            isGenerating = false
-            return
-        }
-        depsScript = nil
-
-        let paths = selectedPaths
-        let format = diagramFormat
-        let mode = depsMode
-
-        let generator = depsGenerator
-        let result = await Task.detached(priority: .userInitiated) {
-            var config = Configuration.default
-            config.format = format
-            return generator.generateScript(for: paths, mode: mode, with: config)
-        }.value
-
-        guard !Task.isCancelled else { return }
-        depsScript = result
-    }
-
-    private func generateSequenceDiagram() async {
-        guard !selectedPaths.isEmpty, !entryPoint.isEmpty else {
-            isGenerating = false
-            return
-        }
-        let parts = entryPoint.split(separator: ".").map(String.init)
-        guard parts.count == 2 else {
-            isGenerating = false
-            return
-        }
-        let entryType = parts[0]
-        let entryMethod = parts[1]
-
-        sequenceScript = nil
-
-        let paths = selectedPaths
-        let format = diagramFormat
-        let depth = sequenceDepth
-
-        let generator = sequenceGenerator
-        let result = await Task.detached(priority: .userInitiated) {
-            var config = Configuration.default
-            config.format = format
-            return generator.generateScript(
-                for: paths,
-                entryType: entryType,
-                entryMethod: entryMethod,
-                depth: depth,
-                with: config
-            )
-        }.value
-
-        guard !Task.isCancelled else { return }
-        sequenceScript = result
-    }
 }
 
 /// A simple implementation of DiagramOutputting for restoring history items.

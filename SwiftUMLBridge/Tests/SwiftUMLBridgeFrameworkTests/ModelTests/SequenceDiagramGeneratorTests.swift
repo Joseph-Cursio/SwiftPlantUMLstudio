@@ -2,7 +2,7 @@ import Testing
 @testable import SwiftUMLBridgeFramework
 import Foundation
 
-@Suite("SequenceDiagramGenerator")
+@Suite("SequenceDiagramGenerator - Entry Points and Resolution")
 struct SequenceDiagramGeneratorTests {
 
     private let generator = SequenceDiagramGenerator()
@@ -131,46 +131,6 @@ struct SequenceDiagramGeneratorTests {
         #expect(script.text.contains("finish"))
     }
 
-    // MARK: - Format propagation
-
-    @Test("plantuml format produces @startuml header")
-    func plantumlFormatProducesStartuml() throws {
-        let source = """
-        class Foo {
-            func run() { self.helper() }
-            func helper() {}
-        }
-        """
-        let path = try tempSwiftFile(source)
-        defer { try? FileManager.default.removeItem(atPath: path) }
-
-        let script = generator.generateScript(for: [path], entryType: "Foo", entryMethod: "run")
-        #expect(script.format == .plantuml)
-        #expect(script.text.hasPrefix("@startuml"))
-    }
-
-    @Test("mermaid format produces sequenceDiagram header")
-    func mermaidFormatProducesSequenceDiagramHeader() throws {
-        let source = """
-        class Foo {
-            func run() { self.helper() }
-            func helper() {}
-        }
-        """
-        let path = try tempSwiftFile(source)
-        defer { try? FileManager.default.removeItem(atPath: path) }
-
-        var config = Configuration.default
-        config.format = .mermaid
-        let script = generator.generateScript(
-            for: [path], entryType: "Foo", entryMethod: "run", with: config
-        )
-        #expect(script.format == .mermaid)
-        #expect(script.text.contains("sequenceDiagram"))
-    }
-
-    // MARK: - Multiple files
-
     // MARK: - findEntryPoints
 
     @Test("findEntryPoints returns sorted list of Type.method strings")
@@ -222,105 +182,5 @@ struct SequenceDiagramGeneratorTests {
         let entryPoints = generator.findEntryPoints(for: [path1, path2])
         #expect(entryPoints.contains("Foo.run"))
         #expect(entryPoints.contains("Bar.execute"))
-    }
-
-    // MARK: - generateScript edge cases
-
-    @Test("generateScript with nonexistent path produces empty-like script")
-    func generateScriptNonexistentPath() {
-        let script = generator.generateScript(
-            for: ["/does/not/exist.swift"],
-            entryType: "Foo",
-            entryMethod: "run"
-        )
-        #expect(script.text.contains("->") == false)
-    }
-
-    @Test("generateScript with depth 0 includes no calls")
-    func generateScriptDepthZero() throws {
-        let source = """
-        class Foo {
-            func run() { self.helper() }
-            func helper() {}
-        }
-        """
-        let path = try tempSwiftFile(source)
-        defer { try? FileManager.default.removeItem(atPath: path) }
-
-        let script = generator.generateScript(
-            for: [path], entryType: "Foo", entryMethod: "run", depth: 0
-        )
-        #expect(script.text.contains("helper") == false)
-    }
-
-    @Test("generateScript with nomnoml format propagates format")
-    func nomnomlFormatPropagation() throws {
-        let source = """
-        class Foo {
-            func run() { self.helper() }
-            func helper() {}
-        }
-        """
-        let path = try tempSwiftFile(source)
-        defer { try? FileManager.default.removeItem(atPath: path) }
-
-        var config = Configuration.default
-        config.format = .nomnoml
-        let script = generator.generateScript(
-            for: [path], entryType: "Foo", entryMethod: "run", with: config
-        )
-        #expect(script.format == .nomnoml)
-    }
-
-    @Test("generateScript with svg format propagates format")
-    func svgFormatPropagation() throws {
-        let source = """
-        class Foo {
-            func run() { self.helper() }
-            func helper() {}
-        }
-        """
-        let path = try tempSwiftFile(source)
-        defer { try? FileManager.default.removeItem(atPath: path) }
-
-        var config = Configuration.default
-        config.format = .svg
-        let script = generator.generateScript(
-            for: [path], entryType: "Foo", entryMethod: "run", with: config
-        )
-        #expect(script.format == .svg)
-    }
-
-    // MARK: - Multiple files
-
-    @Test("edges from multiple files are combined for traversal")
-    func multipleFilesCombineEdgesAcrossFiles() throws {
-        let source1 = """
-        class ServiceA {
-            func start() { ServiceB.process() }
-        }
-        """
-        let source2 = """
-        class ServiceB {
-            func process() { self.finish() }
-            func finish() {}
-        }
-        """
-        let path1 = try tempSwiftFile(source1)
-        let path2 = try tempSwiftFile(source2)
-        defer {
-            try? FileManager.default.removeItem(atPath: path1)
-            try? FileManager.default.removeItem(atPath: path2)
-        }
-
-        let script = generator.generateScript(
-            for: [path1, path2],
-            entryType: "ServiceA",
-            entryMethod: "start",
-            depth: 5
-        )
-        // Both cross-file edge (start → process) and within-file edge (process → finish) should appear.
-        #expect(script.text.contains("process"))
-        #expect(script.text.contains("finish"))
     }
 }

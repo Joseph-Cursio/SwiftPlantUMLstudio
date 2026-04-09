@@ -11,96 +11,87 @@ struct LayoutGraphBuilder {
         from items: [SyntaxStructure],
         configuration: Configuration
     ) -> LayoutGraph {
-        var adjustedItems = items
-
-        if configuration.elements.showNestedTypes {
-            adjustedItems = adjustedItems.populateNestedTypes()
-        }
-
-        adjustedItems = adjustedItems.orderedByProtocolsFirstExtensionsLast()
-
-        if configuration.shallExtensionsBeMerged {
-            let indicator = configuration.elements.mergedExtensionMemberIndicator
-            adjustedItems = adjustedItems.mergeExtensions(mergedMemberIndicator: indicator)
-        }
-
-        let processableKinds: [ElementKind] = [.class, .struct, .extension, .enum, .protocol, .actor, .macro]
+        let adjustedItems = prepareItems(items, configuration: configuration)
         var nodes: [LayoutNode] = []
         var edges: [LayoutEdge] = []
         var nameToId: [String: String] = [:]
 
+        let processableKinds: [ElementKind] = [.class, .struct, .extension, .enum, .protocol, .actor, .macro]
         for item in adjustedItems {
             guard let kind = item.kind, processableKinds.contains(kind) else { continue }
             guard let itemName = item.fullName ?? item.name else { continue }
 
-            let stereotype = stereotypeName(for: kind)
-            let (properties, methods) = extractMembers(from: item, configuration: configuration)
-
-            var compartments: [NodeCompartment] = []
-            if !properties.isEmpty {
-                compartments.append(NodeCompartment(title: nil, items: properties))
-            }
-            if !methods.isEmpty {
-                compartments.append(NodeCompartment(title: nil, items: methods))
-            }
-
             let nodeId = uniqueId(for: itemName, existing: &nameToId)
-            let node = LayoutNode(
-                id: nodeId,
-                label: item.displayName ?? itemName,
-                stereotype: stereotype,
-                compartments: compartments
-            )
-            nodes.append(node)
+            nodes.append(buildNode(from: item, nodeId: nodeId, kind: kind, configuration: configuration))
             nameToId[itemName] = nodeId
-
-            // Extract edges from inherited types
-            if let inheritedTypes = item.inheritedTypes {
-                for parent in inheritedTypes {
-                    guard let parentName = parent.name?.removeAngleBracketsWithContent() else { continue }
-                    let edgeStyle = edgeStyleForInheritance(
-                        parentName: parentName,
-                        itemKind: kind,
-                        existingNames: nameToId
-                    )
-                    edges.append(LayoutEdge(
-                        sourceId: nodeId,
-                        targetId: parentName,
-                        style: edgeStyle
-                    ))
-                }
-            }
-
-            // Nested type connection
-            if let parent = item.parent, let parentName = parent.fullName ?? parent.name {
-                if let parentId = nameToId[parentName] {
-                    edges.append(LayoutEdge(
-                        sourceId: parentId,
-                        targetId: nodeId,
-                        style: .composition
-                    ))
-                }
-            }
+            edges.append(contentsOf: buildEdges(from: item, nodeId: nodeId, kind: kind, nameToId: nameToId))
         }
 
-        // Resolve edge target IDs (some targets reference types by name)
-        for idx in edges.indices {
-            let targetId = edges[idx].targetId
-            if let resolved = nameToId[targetId] {
-                edges[idx] = LayoutEdge(
-                    sourceId: edges[idx].sourceId,
-                    targetId: resolved,
-                    label: edges[idx].label,
-                    style: edges[idx].style
+        edges = resolveAndFilterEdges(edges, nameToId: nameToId, nodeIds: Set(nodes.map(\.id)))
+        return LayoutGraph(nodes: nodes, edges: edges)
+    }
+
+    private static func prepareItems(_ items: [SyntaxStructure], configuration: Configuration) -> [SyntaxStructure] {
+        var adjusted = items
+        if configuration.elements.showNestedTypes {
+            adjusted = adjusted.populateNestedTypes()
+        }
+        adjusted = adjusted.orderedByProtocolsFirstExtensionsLast()
+        if configuration.shallExtensionsBeMerged {
+            adjusted = adjusted.mergeExtensions(
+                mergedMemberIndicator: configuration.elements.mergedExtensionMemberIndicator
+            )
+        }
+        return adjusted
+    }
+
+    private static func buildNode(
+        from item: SyntaxStructure, nodeId: String, kind: ElementKind, configuration: Configuration
+    ) -> LayoutNode {
+        let (properties, methods) = extractMembers(from: item, configuration: configuration)
+        var compartments: [NodeCompartment] = []
+        if !properties.isEmpty { compartments.append(NodeCompartment(title: nil, items: properties)) }
+        if !methods.isEmpty { compartments.append(NodeCompartment(title: nil, items: methods)) }
+
+        return LayoutNode(
+            id: nodeId,
+            label: item.displayName ?? item.name ?? nodeId,
+            stereotype: stereotypeName(for: kind),
+            compartments: compartments
+        )
+    }
+
+    private static func buildEdges(
+        from item: SyntaxStructure, nodeId: String, kind: ElementKind, nameToId: [String: String]
+    ) -> [LayoutEdge] {
+        var edges: [LayoutEdge] = []
+        if let inheritedTypes = item.inheritedTypes {
+            for parent in inheritedTypes {
+                guard let parentName = parent.name?.removeAngleBracketsWithContent() else { continue }
+                let edgeStyle = edgeStyleForInheritance(parentName: parentName, itemKind: kind)
+                edges.append(LayoutEdge(sourceId: nodeId, targetId: parentName, style: edgeStyle))
+            }
+        }
+        if let parent = item.parent, let parentName = parent.fullName ?? parent.name,
+           let parentId = nameToId[parentName] {
+            edges.append(LayoutEdge(sourceId: parentId, targetId: nodeId, style: .composition))
+        }
+        return edges
+    }
+
+    private static func resolveAndFilterEdges(
+        _ edges: [LayoutEdge], nameToId: [String: String], nodeIds: Set<String>
+    ) -> [LayoutEdge] {
+        var resolved = edges
+        for idx in resolved.indices {
+            if let mappedId = nameToId[resolved[idx].targetId] {
+                resolved[idx] = LayoutEdge(
+                    sourceId: resolved[idx].sourceId, targetId: mappedId,
+                    label: resolved[idx].label, style: resolved[idx].style
                 )
             }
         }
-
-        // Remove edges referencing nodes that don't exist in the graph
-        let nodeIds = Set(nodes.map(\.id))
-        edges = edges.filter { nodeIds.contains($0.sourceId) && nodeIds.contains($0.targetId) }
-
-        return LayoutGraph(nodes: nodes, edges: edges)
+        return resolved.filter { nodeIds.contains($0.sourceId) && nodeIds.contains($0.targetId) }
     }
 
     // MARK: - Dependency Graph
@@ -115,11 +106,8 @@ struct LayoutGraphBuilder {
 
         let cycleNodes = model.detectCycles()
         let nodes = nodeNames.sorted().map { name in
-            LayoutNode(
-                id: name,
-                label: name,
-                stereotype: cycleNodes.contains(name) ? "warning" : nil
-            )
+            LayoutNode(id: name, label: name,
+                       stereotype: cycleNodes.contains(name) ? "warning" : nil)
         }
 
         let edges = model.edges.map { edge in
@@ -150,23 +138,12 @@ struct LayoutGraphBuilder {
         }
     }
 
-    private static func edgeStyleForInheritance(
-        parentName: String,
-        itemKind: ElementKind,
-        existingNames: [String: String]
-    ) -> EdgeStyle {
-        // If the parent is a known protocol, use realization style
-        // Otherwise default to inheritance
-        if itemKind == .extension {
-            return .dependency
-        }
-        return .inheritance
+    private static func edgeStyleForInheritance(parentName: String, itemKind: ElementKind) -> EdgeStyle {
+        itemKind == .extension ? .dependency : .inheritance
     }
 
     private static func uniqueId(for name: String, existing: inout [String: String]) -> String {
-        if existing[name] == nil {
-            return name
-        }
+        if existing[name] == nil { return name }
         var counter = 1
         var candidate = "\(name)_\(counter)"
         while existing.values.contains(candidate) {
@@ -177,8 +154,7 @@ struct LayoutGraphBuilder {
     }
 
     private static func extractMembers(
-        from item: SyntaxStructure,
-        configuration: Configuration
+        from item: SyntaxStructure, configuration: Configuration
     ) -> (properties: [String], methods: [String]) {
         var properties: [String] = []
         var methods: [String] = []
@@ -191,59 +167,47 @@ struct LayoutGraphBuilder {
             .showMembersWithAccessLevel.compactMap { ElementAccessibility(orig: $0) }
 
         for sub in substructure {
-            let actualElement: SyntaxStructure
-            if sub.kind == .enumcase {
-                guard let first = sub.substructure?.first else { continue }
-                actualElement = first
-            } else {
-                actualElement = sub
-            }
+            let actual = sub.kind == .enumcase ? sub.substructure?.first : sub
+            guard let element = actual else { continue }
 
-            // Filter by access level (skip for extensions)
             if item.kind != .extension {
-                let effective = actualElement.accessibility ?? .internal
+                let effective = element.accessibility ?? .internal
                 if !accessLevels.contains(effective) { continue }
             }
 
-            let prefix = showAccess ? accessPrefix(for: actualElement) : ""
-
-            guard let kind = actualElement.kind, let memberName = actualElement.name else { continue }
-            switch kind {
-            case .functionMethodInstance:
-                methods.append("\(prefix)\(memberName)()")
-            case .functionMethodStatic:
-                methods.append("\(prefix)static \(memberName)()")
-            case .varInstance:
-                if let typename = actualElement.typename {
-                    properties.append("\(prefix)\(memberName): \(typename)")
-                } else {
-                    properties.append("\(prefix)\(memberName)")
-                }
-            case .varStatic:
-                if let typename = actualElement.typename {
-                    properties.append("\(prefix)static \(memberName): \(typename)")
-                } else {
-                    properties.append("\(prefix)static \(memberName)")
-                }
-            case .enumelement:
-                properties.append(memberName)
-            default:
-                continue
-            }
+            let prefix = showAccess ? accessPrefix(for: element) : ""
+            classifyMember(element, prefix: prefix, properties: &properties, methods: &methods)
         }
-
         return (properties, methods)
+    }
+
+    private static func classifyMember(
+        _ element: SyntaxStructure, prefix: String,
+        properties: inout [String], methods: inout [String]
+    ) {
+        guard let kind = element.kind, let memberName = element.name else { return }
+        switch kind {
+        case .functionMethodInstance:
+            methods.append("\(prefix)\(memberName)()")
+        case .functionMethodStatic:
+            methods.append("\(prefix)static \(memberName)()")
+        case .varInstance:
+            properties.append("\(prefix)\(memberName)\(element.typename.map { ": \($0)" } ?? "")")
+        case .varStatic:
+            properties.append("\(prefix)static \(memberName)\(element.typename.map { ": \($0)" } ?? "")")
+        case .enumelement:
+            properties.append(memberName)
+        default:
+            break
+        }
     }
 
     private static func accessPrefix(for element: SyntaxStructure) -> String {
         guard let accessibility = element.accessibility else { return "~ " }
         switch accessibility {
-        case .open, .public:
-            return "+ "
-        case .internal, .package, .other:
-            return "~ "
-        case .private, .fileprivate:
-            return "- "
+        case .open, .public: return "+ "
+        case .internal, .package, .other: return "~ "
+        case .private, .fileprivate: return "- "
         }
     }
 }

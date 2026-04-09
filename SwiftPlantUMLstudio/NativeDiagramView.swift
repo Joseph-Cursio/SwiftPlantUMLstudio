@@ -82,7 +82,7 @@ struct NativeDiagramView: View {
                 scale = lastScale * value.magnification
             }
             .onEnded { value in
-                lastScale = lastScale * value.magnification
+                lastScale *= value.magnification
                 scale = lastScale
             }
     }
@@ -95,11 +95,8 @@ struct NativeDiagramView: View {
                     height: lastOffset.height + value.translation.height
                 )
             }
-            .onEnded { value in
-                lastOffset = CGSize(
-                    width: lastOffset.width + value.translation.width,
-                    height: lastOffset.height + value.translation.height
-                )
+            .onEnded { _ in
+                lastOffset = offset
             }
     }
 
@@ -109,69 +106,65 @@ struct NativeDiagramView: View {
         let leftX = node.posX - node.width / 2
         let topY = node.posY - node.height / 2
         let stereotype = node.stereotype ?? "class"
-        let headerColor = Self.headerColors[stereotype] ?? Self.headerColors["class"]!
-
-        let fullRect = CGRect(x: leftX, y: topY, width: node.width, height: node.height)
+        let color = Self.headerColors[stereotype] ?? Self.headerColors["class"]!
+        let rect = CGRect(x: leftX, y: topY, width: node.width, height: node.height)
         let headerH = min(Self.headerHeight, node.height)
         let headerRect = CGRect(x: leftX, y: topY, width: node.width, height: headerH)
 
-        // Shadow when hovered
+        drawNodeBox(rect: rect, headerRect: headerRect, color: color,
+                    hasCompartments: !node.compartments.isEmpty, in: &context)
         if isHovered {
-            var shadowContext = context
-            shadowContext.addFilter(.shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 2))
-            shadowContext.fill(
-                Path(roundedRect: fullRect, cornerRadius: Self.cornerRadius),
-                with: .color(Self.bodyFill)
-            )
+            context.stroke(Path(roundedRect: rect, cornerRadius: Self.cornerRadius),
+                           with: .color(Self.strokeColor), lineWidth: 2.5)
         }
+        drawNodeLabels(node: node, topY: topY, stereotype: stereotype, in: &context)
+        drawNodeCompartments(node: node, leftX: leftX, startY: topY + headerH, in: &context)
+    }
 
-        // Body background
-        context.fill(
-            Path(roundedRect: fullRect, cornerRadius: Self.cornerRadius),
-            with: .color(Self.bodyFill)
-        )
+    private func drawNodeBox(
+        rect: CGRect, headerRect: CGRect, color: SwiftUI.Color,
+        hasCompartments: Bool, in context: inout GraphicsContext
+    ) {
+        let rounded = Path(roundedRect: rect, cornerRadius: Self.cornerRadius)
+        context.fill(rounded, with: .color(Self.bodyFill))
 
-        // Header background
+        let bottom: CGFloat = hasCompartments ? 0 : Self.cornerRadius
         let headerPath = Path { path in
-            path.addRoundedRect(
-                in: headerRect,
-                cornerRadii: RectangleCornerRadii(
-                    topLeading: Self.cornerRadius,
-                    bottomLeading: node.compartments.isEmpty ? Self.cornerRadius : 0,
-                    bottomTrailing: node.compartments.isEmpty ? Self.cornerRadius : 0,
-                    topTrailing: Self.cornerRadius
-                )
-            )
+            path.addRoundedRect(in: headerRect, cornerRadii: RectangleCornerRadii(
+                topLeading: Self.cornerRadius, bottomLeading: bottom,
+                bottomTrailing: bottom, topTrailing: Self.cornerRadius
+            ))
         }
-        context.fill(headerPath, with: .color(headerColor))
+        context.fill(headerPath, with: .color(color))
+        context.stroke(rounded, with: .color(Self.strokeColor), lineWidth: 1.5)
+    }
 
-        // Border
-        context.stroke(
-            Path(roundedRect: fullRect, cornerRadius: Self.cornerRadius),
-            with: .color(Self.strokeColor),
-            lineWidth: isHovered ? 2.5 : 1.5
-        )
-
-        // Stereotype text
+    private func drawNodeLabels(
+        node: LayoutNode, topY: Double, stereotype: String,
+        in context: inout GraphicsContext
+    ) {
         let stereoText = Text("\u{00AB}\(stereotype)\u{00BB}")
             .font(.system(size: 10, design: .default).italic())
             .foregroundStyle(Self.headerTextColor)
         context.draw(stereoText, at: CGPoint(x: node.posX, y: topY + 12), anchor: .center)
 
-        // Name text
         let nameText = Text(node.label)
             .font(.system(size: 13, weight: .bold))
             .foregroundStyle(Self.headerTextColor)
         context.draw(nameText, at: CGPoint(x: node.posX, y: topY + 27), anchor: .center)
+    }
 
-        // Compartments
-        var currentY = topY + headerH
+    private func drawNodeCompartments(
+        node: LayoutNode, leftX: Double, startY: Double,
+        in context: inout GraphicsContext
+    ) {
+        var currentY = startY
         for compartment in node.compartments where !compartment.items.isEmpty {
-            // Separator line
             var separatorPath = Path()
             separatorPath.move(to: CGPoint(x: leftX, y: currentY))
             separatorPath.addLine(to: CGPoint(x: leftX + node.width, y: currentY))
-            context.stroke(separatorPath, with: .color(Self.strokeColor.opacity(0.4)), lineWidth: 0.5)
+            context.stroke(separatorPath, with: .color(Self.strokeColor.opacity(0.4)),
+                           lineWidth: 0.5)
 
             currentY += Self.padding
             for item in compartment.items {
@@ -179,11 +172,9 @@ struct NativeDiagramView: View {
                 let itemText = Text(item)
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(Self.bodyTextColor)
-                context.draw(
-                    itemText,
-                    at: CGPoint(x: leftX + Self.padding, y: currentY - 4),
-                    anchor: .bottomLeading
-                )
+                context.draw(itemText,
+                             at: CGPoint(x: leftX + Self.padding, y: currentY - 4),
+                             anchor: .bottomLeading)
             }
             currentY += Self.padding
         }
@@ -231,72 +222,42 @@ struct NativeDiagramView: View {
     }
 
     private func drawArrowhead(
-        at tip: CGPoint,
-        from prev: CGPoint,
-        style: EdgeStyle,
-        in context: inout GraphicsContext
+        at tip: CGPoint, from prev: CGPoint, style: EdgeStyle, in context: inout GraphicsContext
     ) {
         let angle = atan2(tip.y - prev.y, tip.x - prev.x)
         let arrowLength: CGFloat = 12
         let arrowWidth: CGFloat = 6
-
-        let leftAngle = angle + .pi - .pi / 6
-        let rightAngle = angle + .pi + .pi / 6
-
-        let leftPoint = CGPoint(
-            x: tip.x + arrowLength * cos(leftAngle),
-            y: tip.y + arrowLength * sin(leftAngle)
-        )
-        let rightPoint = CGPoint(
-            x: tip.x + arrowLength * cos(rightAngle),
-            y: tip.y + arrowLength * sin(rightAngle)
-        )
-
-        var arrowPath = Path()
-        arrowPath.move(to: tip)
-        arrowPath.addLine(to: leftPoint)
-        arrowPath.addLine(to: rightPoint)
-        arrowPath.closeSubpath()
+        let leftPoint = CGPoint(x: tip.x + arrowLength * cos(angle + .pi - .pi / 6),
+                                y: tip.y + arrowLength * sin(angle + .pi - .pi / 6))
+        let rightPoint = CGPoint(x: tip.x + arrowLength * cos(angle + .pi + .pi / 6),
+                                 y: tip.y + arrowLength * sin(angle + .pi + .pi / 6))
 
         switch style {
         case .inheritance, .realization:
-            // Closed triangle, white fill
-            context.fill(arrowPath, with: .color(.white))
-            context.stroke(arrowPath, with: .color(Self.strokeColor), lineWidth: 1)
+            var path = Path()
+            path.move(to: tip); path.addLine(to: leftPoint); path.addLine(to: rightPoint); path.closeSubpath()
+            context.fill(path, with: .color(.white))
+            context.stroke(path, with: .color(Self.strokeColor), lineWidth: 1)
         case .dependency:
-            // Open arrow (just two lines)
-            var openPath = Path()
-            openPath.move(to: leftPoint)
-            openPath.addLine(to: tip)
-            openPath.addLine(to: rightPoint)
-            context.stroke(openPath, with: .color(Self.strokeColor), lineWidth: 1.5)
+            var path = Path()
+            path.move(to: leftPoint); path.addLine(to: tip); path.addLine(to: rightPoint)
+            context.stroke(path, with: .color(Self.strokeColor), lineWidth: 1.5)
         case .composition:
-            // Filled diamond
-            let midLeft = CGPoint(
-                x: tip.x + arrowLength * cos(angle + .pi),
-                y: tip.y + arrowLength * sin(angle + .pi)
-            )
-            let diamondLeft = CGPoint(
-                x: midLeft.x + arrowWidth * cos(angle + .pi / 2),
-                y: midLeft.y + arrowWidth * sin(angle + .pi / 2)
-            )
-            let diamondRight = CGPoint(
-                x: midLeft.x + arrowWidth * cos(angle - .pi / 2),
-                y: midLeft.y + arrowWidth * sin(angle - .pi / 2)
-            )
-            let farPoint = CGPoint(
-                x: tip.x + arrowLength * 2 * cos(angle + .pi),
-                y: tip.y + arrowLength * 2 * sin(angle + .pi)
-            )
-            var diamondPath = Path()
-            diamondPath.move(to: tip)
-            diamondPath.addLine(to: diamondLeft)
-            diamondPath.addLine(to: farPoint)
-            diamondPath.addLine(to: diamondRight)
-            diamondPath.closeSubpath()
-            context.fill(diamondPath, with: .color(Self.strokeColor))
+            drawDiamond(at: tip, angle: angle, length: arrowLength, width: arrowWidth, in: &context)
         case .association:
             break
         }
+    }
+
+    private func drawDiamond(
+        at tip: CGPoint, angle: CGFloat, length: CGFloat, width: CGFloat, in context: inout GraphicsContext
+    ) {
+        let mid = CGPoint(x: tip.x + length * cos(angle + .pi), y: tip.y + length * sin(angle + .pi))
+        let far = CGPoint(x: tip.x + length * 2 * cos(angle + .pi), y: tip.y + length * 2 * sin(angle + .pi))
+        let left = CGPoint(x: mid.x + width * cos(angle + .pi / 2), y: mid.y + width * sin(angle + .pi / 2))
+        let right = CGPoint(x: mid.x + width * cos(angle - .pi / 2), y: mid.y + width * sin(angle - .pi / 2))
+        var path = Path()
+        path.move(to: tip); path.addLine(to: left); path.addLine(to: far); path.addLine(to: right); path.closeSubpath()
+        context.fill(path, with: .color(Self.strokeColor))
     }
 }

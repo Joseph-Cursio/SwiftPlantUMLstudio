@@ -30,84 +30,68 @@ public struct SequenceSVGRenderer: Sendable {
         entryType: String,
         entryMethod: String
     ) -> SequenceLayout {
-        // Collect participants in order of first appearance
-        var participantNames: [String] = [entryType]
-        for edge in traversedEdges {
-            if !edge.isUnresolved, let calleeType = edge.calleeType,
-               !participantNames.contains(calleeType) {
-                participantNames.append(calleeType)
-            }
-        }
+        let participantNames = collectParticipants(from: traversedEdges, entryType: entryType)
 
-        // Calculate dimensions
         let totalWidth = leftMargin * 2 + Double(participantNames.count) * participantSpacing
         let messagesStartY = topMargin + participantHeight + 20
-        let totalMessages = Double(traversedEdges.count)
-        let lifelinesEndY = messagesStartY + totalMessages * messageSpacing + lifelineExtension
-        let totalHeight = lifelinesEndY + participantHeight + bottomMargin
+        let lifelinesEndY = messagesStartY + Double(traversedEdges.count) * messageSpacing + lifelineExtension
+        let lifelineStartY = topMargin + participantHeight
 
-        // Map participant names to X positions (center of their column)
         var participantX: [String: Double] = [:]
         for (idx, name) in participantNames.enumerated() {
             participantX[name] = leftMargin + Double(idx) * participantSpacing + participantSpacing / 2
         }
 
-        let boxTopY = topMargin
-        let lifelineStartY = boxTopY + participantHeight
-
-        // Build participant models
         let participants = participantNames.map { name in
-            SequenceParticipant(
-                name: name,
-                centerX: participantX[name]!,
-                topY: boxTopY,
-                width: participantWidth,
-                height: participantHeight,
-                bottomTopY: lifelinesEndY
-            )
+            SequenceParticipant(name: name, centerX: participantX[name]!, topY: topMargin,
+                                width: participantWidth, height: participantHeight, bottomTopY: lifelinesEndY)
         }
+        let messages = buildMessages(from: traversedEdges, participantX: participantX,
+                                     entryType: entryType, startY: messagesStartY)
 
-        // Build message models
+        return SequenceLayout(
+            participants: participants, messages: messages,
+            title: "\(entryType).\(entryMethod)", totalWidth: totalWidth,
+            totalHeight: lifelinesEndY + participantHeight + bottomMargin,
+            lifelineStartY: lifelineStartY, lifelineEndY: lifelinesEndY
+        )
+    }
+
+    private static func collectParticipants(from edges: [CallEdge], entryType: String) -> [String] {
+        var names: [String] = [entryType]
+        for edge in edges {
+            if !edge.isUnresolved, let calleeType = edge.calleeType, !names.contains(calleeType) {
+                names.append(calleeType)
+            }
+        }
+        return names
+    }
+
+    private static func buildMessages(
+        from edges: [CallEdge], participantX: [String: Double], entryType: String, startY: Double
+    ) -> [SequenceMessage] {
         var messages: [SequenceMessage] = []
-        var currentY = messagesStartY
+        var currentY = startY
         var lastCallee = entryType
-        for (idx, edge) in traversedEdges.enumerated() {
+        for (idx, edge) in edges.enumerated() {
             if edge.isUnresolved {
                 let noteX = participantX[lastCallee] ?? participantX[entryType]!
                 messages.append(SequenceMessage(
-                    id: idx,
-                    label: "\(edge.calleeMethod)()",
-                    fromX: noteX,
-                    toX: noteX + 60,
-                    posY: currentY,
-                    isUnresolved: true,
-                    noteText: "Unresolved: \(edge.calleeMethod)()"
+                    id: idx, label: "\(edge.calleeMethod)()", fromX: noteX, toX: noteX + 60,
+                    posY: currentY, isUnresolved: true, noteText: "Unresolved: \(edge.calleeMethod)()"
                 ))
             } else if let calleeType = edge.calleeType {
-                let fromX = participantX[edge.callerType] ?? leftMargin
-                let toX = participantX[calleeType] ?? leftMargin
                 messages.append(SequenceMessage(
-                    id: idx,
-                    label: "\(edge.calleeMethod)()",
-                    fromX: fromX,
-                    toX: toX,
-                    posY: currentY,
-                    isAsync: edge.isAsync
+                    id: idx, label: "\(edge.calleeMethod)()",
+                    fromX: participantX[edge.callerType] ?? leftMargin,
+                    toX: participantX[calleeType] ?? leftMargin,
+                    posY: currentY, isAsync: edge.isAsync
                 ))
                 lastCallee = calleeType
             }
             currentY += messageSpacing
         }
-
-        return SequenceLayout(
-            participants: participants,
-            messages: messages,
-            title: "\(entryType).\(entryMethod)",
-            totalWidth: totalWidth,
-            totalHeight: totalHeight,
-            lifelineStartY: lifelineStartY,
-            lifelineEndY: lifelinesEndY
-        )
+        return messages
     }
 
     // MARK: - SVG Rendering
