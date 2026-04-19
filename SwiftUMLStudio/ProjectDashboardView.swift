@@ -153,7 +153,12 @@ struct InsightRowView: View {
     }
 
     private var insightColor: Color {
-        switch insight.severity {
+        InsightRowView.color(for: insight.severity)
+    }
+
+    /// Maps an `Insight.Severity` to its dashboard row color.
+    static func color(for severity: Insight.Severity) -> Color {
+        switch severity {
         case .info: .blue
         case .noteworthy: .orange
         case .warning: .red
