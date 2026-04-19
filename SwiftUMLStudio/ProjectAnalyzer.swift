@@ -10,6 +10,7 @@ struct ProjectSummary: Sendable {
     let topConnectedTypes: [(name: String, connectionCount: Int)]
     let cycleWarnings: [String]
     let entryPoints: [String]
+    let stateMachines: [StateMachineModel]
 }
 
 nonisolated enum ProjectAnalyzer {
@@ -18,7 +19,8 @@ nonisolated enum ProjectAnalyzer {
             return ProjectSummary(
                 totalFiles: 0, totalTypes: 0, typeBreakdown: [:],
                 totalRelationships: 0, moduleImports: [],
-                topConnectedTypes: [], cycleWarnings: [], entryPoints: []
+                topConnectedTypes: [], cycleWarnings: [], entryPoints: [],
+                stateMachines: []
             )
         }
         let generator = ClassDiagramGenerator()
@@ -31,6 +33,7 @@ nonisolated enum ProjectAnalyzer {
         let cycles = DependencyGraphModel(edges: typeEdges).detectCycles()
 
         let entryPoints = SequenceDiagramGenerator().findEntryPoints(for: paths)
+        let stateMachines = StateMachineGenerator().findCandidates(for: paths)
 
         let typeBreakdown = buildTypeBreakdown(from: types)
         let topConnected = findTopConnectedTypes(from: typeEdges)
@@ -46,7 +49,8 @@ nonisolated enum ProjectAnalyzer {
             moduleImports: modules,
             topConnectedTypes: topConnected,
             cycleWarnings: cycles.sorted(),
-            entryPoints: entryPoints
+            entryPoints: entryPoints,
+            stateMachines: stateMachines
         )
     }
 

@@ -16,6 +16,7 @@ enum SuggestionAction: Sendable {
     case classDiagram
     case sequenceDiagram(entryPoint: String)
     case dependencyGraph(mode: DepsMode)
+    case stateMachine(identifier: String)
 }
 
 nonisolated enum SuggestionEngine {
@@ -62,6 +63,30 @@ nonisolated enum SuggestionEngine {
                 title: "See module dependencies",
                 description: "\(summary.moduleImports.count) external modules detected.",
                 action: .dependencyGraph(mode: .modules),
+                requiresPro: true
+            ))
+        }
+
+        // Suggest state machine diagrams for detected candidates, highest-confidence first
+        let sortedStateMachines = summary.stateMachines
+            .sorted { lhs, rhs in lhs.confidence > rhs.confidence }
+            .prefix(3)
+        for model in sortedStateMachines {
+            let transitionCount = model.transitions.count
+            let summaryText: String
+            switch model.confidence {
+            case .high:
+                summaryText = "\(model.states.count) states, \(transitionCount) transitions."
+            case .medium:
+                summaryText = "\(model.states.count) states — type inferred from initializer."
+            case .low:
+                summaryText = "\(transitionCount) transitions — sources unknown."
+            }
+            suggestions.append(DiagramSuggestion(
+                icon: "arrow.triangle.2.circlepath",
+                title: "Diagram \(model.identifier)",
+                description: summaryText,
+                action: .stateMachine(identifier: model.identifier),
                 requiresPro: true
             ))
         }

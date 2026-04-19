@@ -167,12 +167,18 @@ struct ContentView: View {
                 if viewModel.diagramMode == .stateMachine {
                     Picker("State Machine", selection: $bindableVM.stateIdentifier) {
                         Text("—").tag("")
-                        ForEach(viewModel.availableStateMachines, id: \.self) { identifier in
-                            Text(identifier).tag(identifier)
+                        ForEach(viewModel.availableStateMachines, id: \.identifier) { candidate in
+                            Label {
+                                Text(candidate.identifier)
+                            } icon: {
+                                Image(systemName: confidenceSymbol(candidate.confidence))
+                                    .foregroundStyle(confidenceColor(candidate.confidence))
+                            }
+                            .tag(candidate.identifier)
                         }
                     }
                     .pickerStyle(.menu)
-                    .frame(width: 220)
+                    .frame(width: 260)
                     .accessibilityIdentifier("stateMachinePicker")
                 }
 
@@ -204,6 +210,22 @@ struct ContentView: View {
               idx + 1 < args.count else { return }
         let path = args[idx + 1]
         viewModel.selectedPaths = [path]
+    }
+
+    private func confidenceSymbol(_ confidence: DetectionConfidence) -> String {
+        switch confidence {
+        case .high: return "circle.fill"
+        case .medium: return "circle.lefthalf.filled"
+        case .low: return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private func confidenceColor(_ confidence: DetectionConfidence) -> SwiftUI.Color {
+        switch confidence {
+        case .high: return .green
+        case .medium: return .orange
+        case .low: return .red
+        }
     }
 
     private func openPanel() {

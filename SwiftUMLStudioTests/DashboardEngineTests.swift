@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import SwiftUMLBridgeFramework
 @testable import SwiftUMLStudio
 
 // MARK: - GCD dispatch helpers
@@ -20,7 +21,8 @@ private func makeSummary(
     moduleImports: [String] = [],
     topConnectedTypes: [(name: String, connectionCount: Int)] = [],
     cycleWarnings: [String] = [],
-    entryPoints: [String] = []
+    entryPoints: [String] = [],
+    stateMachines: [StateMachineModel] = []
 ) -> ProjectSummary {
     ProjectSummary(
         totalFiles: totalFiles,
@@ -30,7 +32,8 @@ private func makeSummary(
         moduleImports: moduleImports,
         topConnectedTypes: topConnectedTypes,
         cycleWarnings: cycleWarnings,
-        entryPoints: entryPoints
+        entryPoints: entryPoints,
+        stateMachines: stateMachines
     )
 }
 
@@ -81,6 +84,22 @@ struct InsightEngineTests {
             #expect(method != nil, "Expected an entry points insight")
         }
     }
+
+    @Test("generates state machine insight when candidates detected")
+    func stateMachineInsight() {
+        runOnMain {
+            let model = StateMachineModel(
+                hostType: "TrafficLight", enumType: "Light",
+                states: [StateMachineState(name: "red", isInitial: true)],
+                transitions: []
+            )
+            let summary = makeSummary(stateMachines: [model])
+            let insights = InsightEngine.generate(from: summary)
+            let stateInsight = insights.first { $0.title.contains("state machine") }
+            #expect(stateInsight != nil, "Expected a state machine insight")
+            #expect(stateInsight?.description.contains("TrafficLight") == true)
+        }
+    }
 }
 
 // MARK: - SuggestionEngine Tests
@@ -124,6 +143,51 @@ struct SuggestionEngineTests {
             let summary = makeSummary(totalFiles: 0, totalTypes: 0, typeBreakdown: [:], totalRelationships: 0)
             let suggestions = SuggestionEngine.generate(from: summary, isProUnlocked: true)
             #expect(suggestions.isEmpty)
+        }
+    }
+
+    @Test("suggests state machine diagrams as Pro for each detected candidate")
+    func stateMachineSuggestionIsPro() {
+        runOnMain {
+            let model = StateMachineModel(
+                hostType: "Loader", enumType: "State",
+                states: [StateMachineState(name: "idle", isInitial: true)],
+                transitions: [StateTransition(from: "idle", toState: "busy", trigger: "start")]
+            )
+            let summary = makeSummary(stateMachines: [model])
+            let suggestions = SuggestionEngine.generate(from: summary, isProUnlocked: false)
+            let stateSug = suggestions.first { $0.title.contains("Loader.State") }
+            #expect(stateSug != nil, "Expected a state machine suggestion")
+            #expect(stateSug?.requiresPro == true)
+            switch stateSug?.action {
+            case .stateMachine(let identifier): #expect(identifier == "Loader.State")
+            default: Issue.record("Expected a stateMachine action")
+            }
+        }
+    }
+
+    @Test("state machine suggestions are ordered by confidence (high first)")
+    func stateMachineSuggestionsOrderedByConfidence() {
+        runOnMain {
+            let low = StateMachineModel(
+                hostType: "Lo", enumType: "L",
+                states: [], transitions: [], confidence: .low, notes: []
+            )
+            let high = StateMachineModel(
+                hostType: "Hi", enumType: "H",
+                states: [], transitions: [], confidence: .high, notes: []
+            )
+            let medium = StateMachineModel(
+                hostType: "Me", enumType: "M",
+                states: [], transitions: [], confidence: .medium, notes: []
+            )
+            let summary = makeSummary(stateMachines: [low, high, medium])
+            let suggestions = SuggestionEngine.generate(from: summary, isProUnlocked: true)
+            let stateSuggestions = suggestions.compactMap { suggestion -> String? in
+                if case .stateMachine(let identifier) = suggestion.action { return identifier }
+                return nil
+            }
+            #expect(stateSuggestions == ["Hi.H", "Me.M", "Lo.L"])
         }
     }
 }

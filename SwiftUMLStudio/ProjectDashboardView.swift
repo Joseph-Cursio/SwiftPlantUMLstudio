@@ -45,6 +45,11 @@ struct ProjectDashboardView: View {
             StatCardView(value: summary.totalTypes, label: "Types", icon: "rectangle.3.group")
             StatCardView(value: summary.totalRelationships, label: "Relationships", icon: "arrow.triangle.branch")
             StatCardView(value: summary.entryPoints.count, label: "Methods", icon: "function")
+            StatCardView(
+                value: summary.stateMachines.count,
+                label: "State Machines",
+                icon: "arrow.triangle.2.circlepath"
+            )
         }
     }
 

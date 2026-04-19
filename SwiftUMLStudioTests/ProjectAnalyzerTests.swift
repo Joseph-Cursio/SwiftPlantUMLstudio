@@ -155,7 +155,8 @@ struct InsightEngineCoverageTests {
             moduleImports: ["Foundation", "SwiftUI", "Combine"],
             topConnectedTypes: [],
             cycleWarnings: [],
-            entryPoints: []
+            entryPoints: [],
+            stateMachines: []
         )
         let insights = InsightEngine.generate(from: summary)
         let moduleInsight = insights.first { $0.title.contains("modules imported") }
@@ -171,7 +172,8 @@ struct InsightEngineCoverageTests {
             moduleImports: [],
             topConnectedTypes: [],
             cycleWarnings: [],
-            entryPoints: []
+            entryPoints: [],
+            stateMachines: []
         )
         let insights = InsightEngine.generate(from: summary)
         let noRels = insights.first { $0.title.contains("No type relationships") }
@@ -187,7 +189,8 @@ struct InsightEngineCoverageTests {
             moduleImports: [],
             topConnectedTypes: [],
             cycleWarnings: [],
-            entryPoints: []
+            entryPoints: [],
+            stateMachines: []
         )
         let insights = InsightEngine.generate(from: summary)
         #expect(insights.isEmpty)

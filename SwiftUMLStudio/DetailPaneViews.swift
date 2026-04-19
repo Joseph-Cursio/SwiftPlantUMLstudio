@@ -48,6 +48,7 @@ struct DiagramDetailView: View {
                 switch suggestion.action {
                 case .sequenceDiagram: return .sequenceDiagrams
                 case .dependencyGraph: return .dependencyGraphs
+                case .stateMachine: return .stateMachines
                 case .classDiagram: return .sequenceDiagrams
                 }
             }()
@@ -65,6 +66,10 @@ struct DiagramDetailView: View {
         case .dependencyGraph(let mode):
             viewModel.diagramMode = .dependencyGraph
             viewModel.depsMode = mode
+        case .stateMachine(let identifier):
+            viewModel.diagramMode = .stateMachine
+            viewModel.refreshStateMachines()
+            viewModel.stateIdentifier = identifier
         }
         viewModel.generate()
         selectedTab = .preview
@@ -75,33 +80,87 @@ struct DiagramPreviewView: View {
     let viewModel: DiagramViewModel
 
     var body: some View {
-        Group {
-            if viewModel.isGenerating {
-                ProgressView("Generating…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let script = viewModel.currentScript {
-                if script.format == .svg, let graph = script.layoutGraph {
-                    NativeDiagramView(graph: graph)
-                } else if script.format == .svg, let seqLayout = script.sequenceLayout {
-                    NativeSequenceDiagramView(layout: seqLayout)
-                } else {
-                    DiagramWebView(script: script)
-                }
-            } else if viewModel.diagramMode == .sequenceDiagram && viewModel.entryPoint.isEmpty {
-                Text("Enter an entry point (e.g. MyType.myMethod) to generate a diagram.")
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityIdentifier("entryPointPrompt")
-            } else {
-                Text("Select Swift source files or a folder to generate a diagram.")
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityIdentifier("fileSelectionPrompt")
+        VStack(spacing: 0) {
+            if let model = lowConfidenceModel {
+                StateMachineConfidenceBanner(model: model)
             }
+            Group {
+                if viewModel.isGenerating {
+                    ProgressView("Generating…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let script = viewModel.currentScript {
+                    if script.format == .svg, let graph = script.layoutGraph {
+                        NativeDiagramView(graph: graph)
+                    } else if script.format == .svg, let seqLayout = script.sequenceLayout {
+                        NativeSequenceDiagramView(layout: seqLayout)
+                    } else {
+                        DiagramWebView(script: script)
+                    }
+                } else if viewModel.diagramMode == .sequenceDiagram && viewModel.entryPoint.isEmpty {
+                    Text("Enter an entry point (e.g. MyType.myMethod) to generate a diagram.")
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .accessibilityIdentifier("entryPointPrompt")
+                } else {
+                    Text("Select Swift source files or a folder to generate a diagram.")
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .accessibilityIdentifier("fileSelectionPrompt")
+                }
+            }
+        }
+    }
+
+    private var lowConfidenceModel: StateMachineModel? {
+        guard viewModel.diagramMode == .stateMachine,
+              let model = viewModel.currentStateMachineModel,
+              model.confidence != .high
+        else { return nil }
+        return model
+    }
+}
+
+struct StateMachineConfidenceBanner: View {
+    let model: StateMachineModel
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: symbol)
+                .foregroundStyle(tint)
+                .font(.title3)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(headline).font(.subheadline.bold())
+                ForEach(model.notes, id: \.self) { note in
+                    Text("• \(note)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(tint.opacity(0.1))
+        .overlay(Rectangle().frame(height: 1).foregroundStyle(tint.opacity(0.3)), alignment: .bottom)
+        .accessibilityIdentifier("stateMachineConfidenceBanner")
+    }
+
+    private var symbol: String {
+        model.confidence == .medium ? "info.circle.fill" : "exclamationmark.triangle.fill"
+    }
+
+    private var tint: SwiftUI.Color {
+        model.confidence == .medium ? .orange : .red
+    }
+
+    private var headline: String {
+        switch model.confidence {
+        case .medium: return "Partially inferred state machine"
+        case .low: return "Low-confidence state machine"
+        case .high: return ""
         }
     }
 }

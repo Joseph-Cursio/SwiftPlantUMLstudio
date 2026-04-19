@@ -31,6 +31,7 @@ struct ExplorerDetailView: View {
                 switch suggestion.action {
                 case .sequenceDiagram: return .sequenceDiagrams
                 case .dependencyGraph: return .dependencyGraphs
+                case .stateMachine: return .stateMachines
                 case .classDiagram: return .sequenceDiagrams
                 }
             }()
@@ -48,6 +49,10 @@ struct ExplorerDetailView: View {
         case .dependencyGraph(let mode):
             viewModel.diagramMode = .dependencyGraph
             viewModel.depsMode = mode
+        case .stateMachine(let identifier):
+            viewModel.diagramMode = .stateMachine
+            viewModel.refreshStateMachines()
+            viewModel.stateIdentifier = identifier
         }
         viewModel.generate()
     }

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import Testing
+import SwiftUMLBridgeFramework
 @testable import SwiftUMLStudio
 
 // MARK: - GCD dispatch helpers
@@ -38,7 +39,8 @@ private func makeTestSummary(
         (name: "Service", connectionCount: 3)
     ],
     cycleWarnings: [String] = [],
-    entryPoints: [String] = ["App.main"]
+    entryPoints: [String] = ["App.main"],
+    stateMachines: [StateMachineModel] = []
 ) -> ProjectSummary {
     ProjectSummary(
         totalFiles: totalFiles,
@@ -48,7 +50,8 @@ private func makeTestSummary(
         moduleImports: moduleImports,
         topConnectedTypes: topConnectedTypes,
         cycleWarnings: cycleWarnings,
-        entryPoints: entryPoints
+        entryPoints: entryPoints,
+        stateMachines: stateMachines
     )
 }
 

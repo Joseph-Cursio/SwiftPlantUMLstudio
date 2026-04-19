@@ -106,5 +106,17 @@ nonisolated enum InsightEngine {
                 severity: .info
             ))
         }
+
+        if !summary.stateMachines.isEmpty {
+            let count = summary.stateMachines.count
+            let hostNames = summary.stateMachines.prefix(3).map(\.hostType).joined(separator: ", ")
+            let suffix = count > 3 ? " and \(count - 3) more" : ""
+            insights.append(Insight(
+                icon: "arrow.triangle.2.circlepath",
+                title: "\(count) state machine\(count == 1 ? "" : "s") detected",
+                description: "\(hostNames)\(suffix) — diagram the lifecycle to see transitions.",
+                severity: .info
+            ))
+        }
     }
 }

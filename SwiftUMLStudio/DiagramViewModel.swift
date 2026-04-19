@@ -23,7 +23,12 @@ final class DiagramViewModel {
     var sequenceDepth: Int = 3
     var depsMode: DepsMode = .types
     var stateIdentifier: String = ""
-    var availableStateMachines: [String] = []
+    var availableStateMachines: [StateMachineModel] = []
+
+    /// The full model backing the currently-selected state machine, if any.
+    var currentStateMachineModel: StateMachineModel? {
+        availableStateMachines.first(where: { $0.identifier == stateIdentifier })
+    }
 
     var fileTree: [FileNode] = []
     var selectedFileURL: URL?
@@ -266,9 +271,9 @@ final class DiagramViewModel {
             return
         }
         availableStateMachines = stateGenerator.findCandidates(for: selectedPaths)
-            .map(\.identifier)
-        if !availableStateMachines.contains(stateIdentifier) {
-            stateIdentifier = availableStateMachines.first ?? ""
+        let identifiers = availableStateMachines.map(\.identifier)
+        if !identifiers.contains(stateIdentifier) {
+            stateIdentifier = identifiers.first ?? ""
         }
     }
 
