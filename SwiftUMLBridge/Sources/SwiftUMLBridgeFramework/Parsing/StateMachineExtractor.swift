@@ -30,6 +30,7 @@ final class StateMachineExtractor: SyntaxVisitor {
     private struct SwitchFrame {
         let subjectPropertyName: String?
         var currentCaseName: String?
+        var currentGuardText: String?
     }
 
     private struct ObservedTransition {
@@ -38,6 +39,7 @@ final class StateMachineExtractor: SyntaxVisitor {
         let propertyName: String
         let rhsCaseName: String
         let switchCaseName: String?
+        let switchGuardText: String?
         let switchSubjectMatches: Bool
     }
 
@@ -143,7 +145,8 @@ final class StateMachineExtractor: SyntaxVisitor {
     override func visit(_ node: SwitchExprSyntax) -> SyntaxVisitorContinueKind {
         switchStack.append(SwitchFrame(
             subjectPropertyName: Self.propertyName(from: node.subject),
-            currentCaseName: nil
+            currentCaseName: nil,
+            currentGuardText: nil
         ))
         return .visitChildren
     }
@@ -151,8 +154,9 @@ final class StateMachineExtractor: SyntaxVisitor {
 
     override func visit(_ node: SwitchCaseSyntax) -> SyntaxVisitorContinueKind {
         guard !switchStack.isEmpty else { return .visitChildren }
-        let caseName = Self.extractEnumCaseLabel(from: node)
-        switchStack[switchStack.count - 1].currentCaseName = caseName
+        let parsed = Self.extractEnumCaseLabel(from: node)
+        switchStack[switchStack.count - 1].currentCaseName = parsed.caseName
+        switchStack[switchStack.count - 1].currentGuardText = parsed.guardText
         return .visitChildren
     }
 
@@ -180,6 +184,7 @@ final class StateMachineExtractor: SyntaxVisitor {
                 propertyName: propertyName,
                 rhsCaseName: rhsCase,
                 switchCaseName: activeSwitch?.currentCaseName,
+                switchGuardText: activeSwitch?.currentGuardText,
                 switchSubjectMatches: matches
             ))
         }
@@ -208,17 +213,20 @@ final class StateMachineExtractor: SyntaxVisitor {
         return memberAccess.declName.baseName.text
     }
 
-    /// Extract the enum case label from a `case .foo:` switch case.
-    private static func extractEnumCaseLabel(from node: SwitchCaseSyntax) -> String? {
-        guard case .case(let label) = node.label else { return nil }
+    /// Extract the enum case label and optional `where`-clause guard from a `case .foo:` switch case.
+    private static func extractEnumCaseLabel(from node: SwitchCaseSyntax)
+        -> (caseName: String?, guardText: String?) {
+        guard case .case(let label) = node.label else { return (nil, nil) }
         for item in label.caseItems {
-            if let pattern = item.pattern.as(ExpressionPatternSyntax.self),
-               let memberAccess = pattern.expression.as(MemberAccessExprSyntax.self),
-               memberAccess.base == nil {
-                return memberAccess.declName.baseName.text
-            }
+            guard let pattern = item.pattern.as(ExpressionPatternSyntax.self),
+                  let memberAccess = pattern.expression.as(MemberAccessExprSyntax.self),
+                  memberAccess.base == nil else { continue }
+            let caseName = memberAccess.declName.baseName.text
+            let guardText = item.whereClause?.condition.description
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return (caseName, guardText)
         }
-        return nil
+        return (nil, nil)
     }
 
     // MARK: - Post-processing
@@ -238,7 +246,12 @@ final class StateMachineExtractor: SyntaxVisitor {
 
             let transitions: [StateTransition] = group.compactMap { obs in
                 guard obs.switchSubjectMatches, let from = obs.switchCaseName else { return nil }
-                return StateTransition(from: from, toState: obs.rhsCaseName, trigger: obs.funcName)
+                return StateTransition(
+                    from: from,
+                    toState: obs.rhsCaseName,
+                    trigger: obs.funcName,
+                    guardText: obs.switchGuardText
+                )
             }
             guard !transitions.isEmpty else { continue }
 

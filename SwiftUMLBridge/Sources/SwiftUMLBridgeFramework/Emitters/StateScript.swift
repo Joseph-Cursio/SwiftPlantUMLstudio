@@ -59,11 +59,7 @@ private extension StateScript {
         }
 
         for transition in model.transitions {
-            var line = "\(transition.from) --> \(transition.toState)"
-            if let trigger = transition.trigger, !trigger.isEmpty {
-                line += " : \(trigger)()"
-            }
-            lines.append(line)
+            lines.append("\(transition.from) --> \(transition.toState)\(transitionLabel(transition))")
         }
 
         for state in model.states where state.isFinal {
@@ -72,6 +68,17 @@ private extension StateScript {
 
         lines.append("@enduml")
         return lines.joined(separator: "\n")
+    }
+
+    static func transitionLabel(_ transition: StateTransition) -> String {
+        var parts: [String] = []
+        if let trigger = transition.trigger, !trigger.isEmpty {
+            parts.append("\(trigger)()")
+        }
+        if let guardText = transition.guardText, !guardText.isEmpty {
+            parts.append("[\(guardText)]")
+        }
+        return parts.isEmpty ? "" : " : " + parts.joined(separator: " ")
     }
 }
 
@@ -89,11 +96,7 @@ private extension StateScript {
         }
 
         for transition in model.transitions {
-            var line = "\(transition.from) --> \(transition.toState)"
-            if let trigger = transition.trigger, !trigger.isEmpty {
-                line += " : \(trigger)()"
-            }
-            lines.append(line)
+            lines.append("\(transition.from) --> \(transition.toState)\(transitionLabel(transition))")
         }
 
         for state in model.states where state.isFinal {

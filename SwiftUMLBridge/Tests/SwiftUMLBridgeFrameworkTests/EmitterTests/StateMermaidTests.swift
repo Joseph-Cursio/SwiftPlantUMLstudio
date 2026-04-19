@@ -79,6 +79,26 @@ struct StateMermaidTests {
         #expect(script.text.contains("@enduml") == false)
     }
 
+    @Test("guarded transition renders trigger and [guard] in label")
+    func emitsGuardedTransition() {
+        let model = StateMachineModel(
+            hostType: "Runner",
+            enumType: "Flow",
+            states: [
+                StateMachineState(name: "idle", isInitial: true),
+                StateMachineState(name: "retrying")
+            ],
+            transitions: [
+                StateTransition(
+                    from: "idle", toState: "retrying",
+                    trigger: "tick", guardText: "retryCount > 0"
+                )
+            ]
+        )
+        let script = makeScript(model: model)
+        #expect(script.text.contains("idle --> retrying : tick() [retryCount > 0]"))
+    }
+
     @Test("nomnoml format falls back to Mermaid text, reports nomnoml")
     func nomnomlFallsBackToMermaidText() {
         let script = makeScript(model: makeModel(), format: .nomnoml)

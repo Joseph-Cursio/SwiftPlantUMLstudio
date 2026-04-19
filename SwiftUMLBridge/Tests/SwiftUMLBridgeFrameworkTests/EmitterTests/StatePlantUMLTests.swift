@@ -99,6 +99,26 @@ struct StatePlantUMLTests {
         #expect(script.format == .plantuml)
     }
 
+    @Test("guarded transition renders trigger and [guard] in label")
+    func emitsGuardedTransition() {
+        let model = StateMachineModel(
+            hostType: "Runner",
+            enumType: "Flow",
+            states: [
+                StateMachineState(name: "idle", isInitial: true),
+                StateMachineState(name: "retrying")
+            ],
+            transitions: [
+                StateTransition(
+                    from: "idle", toState: "retrying",
+                    trigger: "tick", guardText: "retryCount > 0"
+                )
+            ]
+        )
+        let script = makeScript(model: model)
+        #expect(script.text.contains("idle --> retrying : tick() [retryCount > 0]"))
+    }
+
     @Test("StateScript conforms to DiagramOutputting")
     func conformsToDiagramOutputting() {
         let script: any DiagramOutputting = makeScript(model: makeModel())
