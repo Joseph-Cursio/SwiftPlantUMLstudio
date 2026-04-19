@@ -1,9 +1,6 @@
 import Foundation
 
 /// A rendered state machine diagram.
-///
-/// M1 emits PlantUML only. Mermaid/Nomnoml/SVG will follow in M2 (Mermaid fallback
-/// for Nomnoml, SVG via the Mermaid HTML pipeline).
 public struct StateScript: Sendable {
     /// The diagram text.
     public let text: String
@@ -20,15 +17,25 @@ public struct StateScript: Sendable {
     }
 
     internal init(model: StateMachineModel, configuration: Configuration) {
-        self.format = configuration.format
         switch configuration.format {
         case .plantuml:
             self.text = StateScript.buildPlantUMLText(model: model)
-        case .mermaid, .nomnoml, .svg:
-            // M1: non-PlantUML formats fall back to PlantUML text for now.
-            // M2 will add a native Mermaid `stateDiagram-v2` emitter and reuse
-            // the Mermaid HTML pipeline for SVG.
-            self.text = StateScript.buildPlantUMLText(model: model)
+            self.format = .plantuml
+        case .mermaid:
+            self.text = StateScript.buildMermaidText(model: model)
+            self.format = .mermaid
+        case .nomnoml:
+            // nomnoml has no state-diagram syntax; fall back to Mermaid text
+            // (matches SequenceScript's behavior for the same limitation).
+            self.text = StateScript.buildMermaidText(model: model)
+            self.format = .nomnoml
+        case .svg:
+            // No native SVG layout engine for state diagrams yet; piggyback on
+            // the Mermaid pipeline by emitting Mermaid text and overriding the
+            // reported format so DiagramWebView renders it through
+            // MermaidHTMLBuilder.
+            self.text = StateScript.buildMermaidText(model: model)
+            self.format = .mermaid
         }
     }
 
@@ -64,6 +71,35 @@ private extension StateScript {
         }
 
         lines.append("@enduml")
+        return lines.joined(separator: "\n")
+    }
+}
+
+// MARK: - Mermaid
+
+private extension StateScript {
+    static func buildMermaidText(model: StateMachineModel) -> String {
+        var lines: [String] = [
+            "stateDiagram-v2",
+            "%% title: \(model.hostType).\(model.enumType)"
+        ]
+
+        if let initial = model.states.first(where: { $0.isInitial }) {
+            lines.append("[*] --> \(initial.name)")
+        }
+
+        for transition in model.transitions {
+            var line = "\(transition.from) --> \(transition.toState)"
+            if let trigger = transition.trigger, !trigger.isEmpty {
+                line += " : \(trigger)()"
+            }
+            lines.append(line)
+        }
+
+        for state in model.states where state.isFinal {
+            lines.append("\(state.name) --> [*]")
+        }
+
         return lines.joined(separator: "\n")
     }
 }

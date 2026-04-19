@@ -1,8 +1,8 @@
 import Testing
 @testable import SwiftUMLBridgeFramework
 
-@Suite("StateScript — PlantUML")
-struct StatePlantUMLTests {
+@Suite("StateScript — Mermaid")
+struct StateMermaidTests {
 
     private func makeModel() -> StateMachineModel {
         StateMachineModel(
@@ -21,29 +21,22 @@ struct StatePlantUMLTests {
         )
     }
 
-    private func makeScript(model: StateMachineModel, format: DiagramFormat = .plantuml) -> StateScript {
+    private func makeScript(model: StateMachineModel, format: DiagramFormat = .mermaid) -> StateScript {
         var config = Configuration.default
         config.format = format
         return StateScript(model: model, configuration: config)
     }
 
-    @Test("starts with @startuml")
-    func startsWithStartuml() {
+    @Test("starts with stateDiagram-v2 header")
+    func startsWithHeader() {
         let script = makeScript(model: makeModel())
-        #expect(script.text.hasPrefix("@startuml"))
+        #expect(script.text.hasPrefix("stateDiagram-v2"))
     }
 
-    @Test("ends with @enduml")
-    func endsWithEnduml() {
+    @Test("includes comment with host.enum label")
+    func includesLabelComment() {
         let script = makeScript(model: makeModel())
-        let lastLine = script.text.components(separatedBy: "\n").last(where: { !$0.isEmpty })
-        #expect(lastLine == "@enduml")
-    }
-
-    @Test("contains title line")
-    func containsTitleLine() {
-        let script = makeScript(model: makeModel())
-        #expect(script.text.contains("title TrafficLight.Light"))
+        #expect(script.text.contains("%% title: TrafficLight.Light"))
     }
 
     @Test("emits [*] --> initial state")
@@ -79,29 +72,24 @@ struct StatePlantUMLTests {
         #expect(script.text.contains("done --> [*]"))
     }
 
-    @Test("transition without trigger omits arrow label")
-    func transitionWithoutTriggerHasNoLabel() {
-        let model = StateMachineModel(
-            hostType: "Host",
-            enumType: "Flow",
-            states: [StateMachineState(name: "a", isInitial: true), StateMachineState(name: "b")],
-            transitions: [StateTransition(from: "a", toState: "b")]
-        )
-        let script = makeScript(model: model)
-        #expect(script.text.contains("a --> b"))
-        #expect(script.text.contains("a --> b : ") == false)
+    @Test("does not include PlantUML delimiters")
+    func noPlantUMLDelimiters() {
+        let script = makeScript(model: makeModel())
+        #expect(script.text.contains("@startuml") == false)
+        #expect(script.text.contains("@enduml") == false)
     }
 
-    @Test("empty script value is safe to use")
-    func emptyScript() {
-        let script = StateScript.empty
-        #expect(script.text.isEmpty)
-        #expect(script.format == .plantuml)
+    @Test("nomnoml format falls back to Mermaid text, reports nomnoml")
+    func nomnomlFallsBackToMermaidText() {
+        let script = makeScript(model: makeModel(), format: .nomnoml)
+        #expect(script.format == .nomnoml)
+        #expect(script.text.hasPrefix("stateDiagram-v2"))
     }
 
-    @Test("StateScript conforms to DiagramOutputting")
-    func conformsToDiagramOutputting() {
-        let script: any DiagramOutputting = makeScript(model: makeModel())
-        #expect(script.text.hasPrefix("@startuml"))
+    @Test("svg format reports mermaid so web view renders via Mermaid pipeline")
+    func svgReportsMermaidFormat() {
+        let script = makeScript(model: makeModel(), format: .svg)
+        #expect(script.format == .mermaid)
+        #expect(script.text.hasPrefix("stateDiagram-v2"))
     }
 }
