@@ -71,4 +71,63 @@ struct StateMachineGeneratorTests {
         #expect(script.text.contains("title TrafficLight.Light"))
         #expect(script.text.contains("red --> green : advance()"))
     }
+
+    @Test("findCandidates merges same host+enum across files")
+    func mergesAcrossFiles() throws {
+        // Two files that each independently contain the enum declaration and the
+        // host type. This mirrors a (rare but possible) project where a type is
+        // conditionally compiled or split for target-specific reasons. Each file
+        // contributes one transition; the merge should union them. File 2 also
+        // has a stray unguarded assignment that surfaces as a low-confidence
+        // partial — merging should drag the overall confidence down.
+        let source1 = """
+        enum Light { case red, green }
+        class TrafficLight {
+            var state: Light = .red
+            func goGreen() {
+                switch self.state {
+                case .red: self.state = .green
+                case .green: break
+                }
+            }
+        }
+        """
+        let source2 = """
+        enum Other { case idle }
+        class Bystander {
+            var state: Other = .idle
+            func nudge() {
+                self.state = .idle
+            }
+        }
+        enum Light { case red, green }
+        class TrafficLight {
+            var state: Light = .red
+            func goRed() {
+                switch self.state {
+                case .green: self.state = .red
+                case .red: break
+                }
+            }
+        }
+        """
+        let directory = try writeTemp(source1, name: "File1.swift")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try source2.write(
+            to: directory.appendingPathComponent("File2.swift"),
+            atomically: true, encoding: .utf8
+        )
+
+        let generator = StateMachineGenerator()
+        let candidates = generator.findCandidates(for: [directory.path])
+
+        let merged = candidates.first(where: { $0.identifier == "TrafficLight.Light" })
+        #expect(merged != nil)
+        #expect(merged?.transitions.count == 2, "merged transitions should union across files")
+        #expect(merged?.transitions.contains(where: { $0.from == "red" && $0.toState == "green" }) == true)
+        #expect(merged?.transitions.contains(where: { $0.from == "green" && $0.toState == "red" }) == true)
+
+        let lowConfidence = candidates.first(where: { $0.identifier == "Bystander.Other" })
+        #expect(lowConfidence?.confidence == .low)
+    }
 }

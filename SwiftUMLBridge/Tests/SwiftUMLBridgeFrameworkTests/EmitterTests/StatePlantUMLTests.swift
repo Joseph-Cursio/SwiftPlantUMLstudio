@@ -119,6 +119,17 @@ struct StatePlantUMLTests {
         #expect(script.text.contains("idle --> retrying : tick() [retryCount > 0]"))
     }
 
+    @Test("encodeText returns a non-empty encoded value for a rendered script")
+    func encodeTextRoundTrip() {
+        let script = makeScript(model: makeModel())
+        let encoded = script.encodeText()
+        #expect(encoded.isEmpty == false)
+        // DiagramText encoding strips whitespace, so a deterministic equality check
+        // against the plain text isn't meaningful — but the encoded value should be
+        // stable for the same input.
+        #expect(script.encodeText() == encoded)
+    }
+
     @Test("StateScript conforms to DiagramOutputting")
     func conformsToDiagramOutputting() {
         let script: any DiagramOutputting = makeScript(model: makeModel())

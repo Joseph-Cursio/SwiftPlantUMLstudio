@@ -148,15 +148,15 @@ struct StateMachineConfidenceBanner: View {
         .accessibilityIdentifier("stateMachineConfidenceBanner")
     }
 
-    private var symbol: String {
+    var symbol: String {
         model.confidence == .medium ? "info.circle.fill" : "exclamationmark.triangle.fill"
     }
 
-    private var tint: SwiftUI.Color {
+    var tint: SwiftUI.Color {
         model.confidence == .medium ? .orange : .red
     }
 
-    private var headline: String {
+    var headline: String {
         switch model.confidence {
         case .medium: return "Partially inferred state machine"
         case .low: return "Low-confidence state machine"
