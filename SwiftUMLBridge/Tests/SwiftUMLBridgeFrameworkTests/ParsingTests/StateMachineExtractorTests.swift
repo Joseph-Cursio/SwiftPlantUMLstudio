@@ -145,6 +145,49 @@ struct StateMachineExtractorTests {
         #expect(models.isEmpty)
     }
 
+    @Test("@Published wrapper with explicit type annotation is detected")
+    func publishedWithAnnotationDetected() {
+        let source = """
+        enum Loading { case idle, busy, done }
+        class Store: ObservableObject {
+            @Published var state: Loading = .idle
+            func start() {
+                switch self.state {
+                case .idle: self.state = .busy
+                case .busy: self.state = .done
+                case .done: break
+                }
+            }
+        }
+        """
+        let models = StateMachineExtractor.extract(from: source)
+        #expect(models.count == 1)
+        #expect(models.first?.hostType == "Store")
+        #expect(models.first?.enumType == "Loading")
+    }
+
+    @Test("@State wrapper with inferred type is detected via initializer")
+    func stateWrapperWithInferredType() {
+        let source = """
+        enum Tab { case home, search, profile }
+        struct RootView {
+            @State var state = Tab.home
+            mutating func select() {
+                switch self.state {
+                case .home: self.state = .search
+                case .search: self.state = .profile
+                case .profile: self.state = .home
+                }
+            }
+        }
+        """
+        let models = StateMachineExtractor.extract(from: source)
+        #expect(models.count == 1)
+        #expect(models.first?.hostType == "RootView")
+        #expect(models.first?.enumType == "Tab")
+        #expect(models.first?.transitions.count == 3)
+    }
+
     @Test("two hosts sharing the same enum are each emitted")
     func multipleHostsSameEnum() {
         let source = """

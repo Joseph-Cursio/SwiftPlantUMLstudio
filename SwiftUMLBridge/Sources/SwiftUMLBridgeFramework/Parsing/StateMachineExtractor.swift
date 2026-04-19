@@ -102,14 +102,32 @@ final class StateMachineExtractor: SyntaxVisitor {
         guard funcStack.isEmpty else { return .visitChildren }
 
         for binding in node.bindings {
-            guard let identifierPattern = binding.pattern.as(IdentifierPatternSyntax.self),
-                  let annotation = binding.typeAnnotation else { continue }
+            guard let identifierPattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
+                continue
+            }
             let propertyName = identifierPattern.identifier.text
-            let annotationText = annotation.type.description
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            typeProperties[typeName, default: [:]][propertyName] = annotationText
+
+            if let annotation = binding.typeAnnotation {
+                let annotationText = annotation.type.description
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                typeProperties[typeName, default: [:]][propertyName] = annotationText
+            } else if let inferred = Self.inferTypeFromInitializer(binding.initializer?.value) {
+                // Fallback for property-wrapper inferred types like `@State var state = Light.red`.
+                typeProperties[typeName, default: [:]][propertyName] = inferred
+            }
         }
         return .visitChildren
+    }
+
+    /// Infer a type name from an initializer expression like `Light.red` → `"Light"`.
+    private static func inferTypeFromInitializer(_ expr: ExprSyntax?) -> String? {
+        guard let expr else { return nil }
+        if let memberAccess = expr.as(MemberAccessExprSyntax.self),
+           let base = memberAccess.base?.as(DeclReferenceExprSyntax.self) {
+            let name = base.baseName.text
+            return name.first?.isUppercase == true ? name : nil
+        }
+        return nil
     }
 
     // MARK: - Function declarations
