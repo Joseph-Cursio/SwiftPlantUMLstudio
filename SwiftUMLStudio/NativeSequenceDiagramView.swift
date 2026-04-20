@@ -143,60 +143,60 @@ struct NativeSequenceDiagramView: View {
     }
 
     private func drawArrow(message: SequenceMessage, in context: inout GraphicsContext) {
-        let isDashed = message.isAsync
-        let strokeStyle = isDashed
-            ? StrokeStyle(lineWidth: 1.2, dash: [4, 3])
-            : StrokeStyle(lineWidth: 1.2)
+        let strokeStyle = NativeSequenceGeometry.arrowStrokeStyle(isAsync: message.isAsync)
 
-        // Self-call loop
-        if abs(message.fromX - message.toX) < 1 {
-            let loopWidth: CGFloat = 30
-            var path = Path()
-            path.move(to: CGPoint(x: message.fromX, y: message.posY))
-            path.addLine(to: CGPoint(x: message.fromX + loopWidth, y: message.posY))
-            path.addLine(to: CGPoint(x: message.fromX + loopWidth, y: message.posY + 20))
-            path.addLine(to: CGPoint(x: message.fromX, y: message.posY + 20))
-            context.stroke(path, with: .color(Self.strokeColor), style: strokeStyle)
-
-            // Arrowhead at the return point
-            drawSmallArrow(
-                at: CGPoint(x: message.fromX, y: message.posY + 20),
-                pointingLeft: true,
-                filled: !message.isAsync,
-                in: &context
-            )
-
-            let labelText = Text(message.label)
-                .font(.system(size: 11))
-                .foregroundStyle(Self.bodyTextColor)
-            context.draw(
-                labelText,
-                at: CGPoint(x: message.fromX + loopWidth + 4, y: message.posY + 10),
-                anchor: .leading
-            )
+        if NativeSequenceGeometry.isSelfLoop(message: message) {
+            drawSelfLoop(message: message, strokeStyle: strokeStyle, in: &context)
         } else {
-            // Horizontal arrow
-            var path = Path()
-            path.move(to: CGPoint(x: message.fromX, y: message.posY))
-            path.addLine(to: CGPoint(x: message.toX, y: message.posY))
-            context.stroke(path, with: .color(Self.strokeColor), style: strokeStyle)
-
-            // Arrowhead
-            let pointsLeft = message.toX < message.fromX
-            drawSmallArrow(
-                at: CGPoint(x: message.toX, y: message.posY),
-                pointingLeft: pointsLeft,
-                filled: !message.isAsync,
-                in: &context
-            )
-
-            // Label above arrow
-            let labelX = (message.fromX + message.toX) / 2
-            let labelText = Text(message.label)
-                .font(.system(size: 11))
-                .foregroundStyle(Self.bodyTextColor)
-            context.draw(labelText, at: CGPoint(x: labelX, y: message.posY - 6), anchor: .bottom)
+            drawHorizontalArrow(message: message, strokeStyle: strokeStyle, in: &context)
         }
+    }
+
+    private func drawSelfLoop(
+        message: SequenceMessage, strokeStyle: StrokeStyle, in context: inout GraphicsContext
+    ) {
+        let loop = NativeSequenceGeometry.selfLoop(at: message.fromX, posY: message.posY)
+        var path = Path()
+        path.move(to: loop.start)
+        path.addLine(to: loop.top)
+        path.addLine(to: loop.bottom)
+        path.addLine(to: loop.returnPoint)
+        context.stroke(path, with: .color(Self.strokeColor), style: strokeStyle)
+
+        drawSmallArrow(
+            at: loop.returnPoint,
+            pointingLeft: true,
+            filled: !message.isAsync,
+            in: &context
+        )
+
+        let labelText = Text(message.label)
+            .font(.system(size: 11))
+            .foregroundStyle(Self.bodyTextColor)
+        context.draw(labelText, at: loop.labelOrigin, anchor: .leading)
+    }
+
+    private func drawHorizontalArrow(
+        message: SequenceMessage, strokeStyle: StrokeStyle, in context: inout GraphicsContext
+    ) {
+        var path = Path()
+        path.move(to: CGPoint(x: message.fromX, y: message.posY))
+        path.addLine(to: CGPoint(x: message.toX, y: message.posY))
+        context.stroke(path, with: .color(Self.strokeColor), style: strokeStyle)
+
+        let pointsLeft = NativeSequenceGeometry.arrowPointsLeft(from: message.fromX, to: message.toX)
+        drawSmallArrow(
+            at: CGPoint(x: message.toX, y: message.posY),
+            pointingLeft: pointsLeft,
+            filled: !message.isAsync,
+            in: &context
+        )
+
+        let labelX = NativeSequenceGeometry.labelMidX(from: message.fromX, to: message.toX)
+        let labelText = Text(message.label)
+            .font(.system(size: 11))
+            .foregroundStyle(Self.bodyTextColor)
+        context.draw(labelText, at: CGPoint(x: labelX, y: message.posY - 6), anchor: .bottom)
     }
 
     private func drawSmallArrow(
@@ -205,13 +205,11 @@ struct NativeSequenceDiagramView: View {
         filled: Bool,
         in context: inout GraphicsContext
     ) {
-        let direction: CGFloat = pointingLeft ? 1 : -1
-        let arrowSize: CGFloat = 8
-
+        let points = NativeSequenceGeometry.smallArrowPoints(at: point, pointingLeft: pointingLeft)
         var path = Path()
-        path.move(to: point)
-        path.addLine(to: CGPoint(x: point.x + direction * arrowSize, y: point.y - arrowSize / 2))
-        path.addLine(to: CGPoint(x: point.x + direction * arrowSize, y: point.y + arrowSize / 2))
+        path.move(to: points.tip)
+        path.addLine(to: points.upper)
+        path.addLine(to: points.lower)
         path.closeSubpath()
 
         if filled {
@@ -222,15 +220,7 @@ struct NativeSequenceDiagramView: View {
     }
 
     private func drawNote(text: String, centerX: Double, posY: Double, in context: inout GraphicsContext) {
-        let noteWidth = max(Double(text.count) * 7, 100)
-        let noteHeight: Double = 24
-        let rect = CGRect(
-            x: centerX - noteWidth / 2,
-            y: posY - noteHeight / 2,
-            width: noteWidth,
-            height: noteHeight
-        )
-
+        let rect = NativeSequenceGeometry.noteRect(text: text, centerX: centerX, posY: posY)
         context.fill(Path(roundedRect: rect, cornerRadius: 2), with: .color(Self.noteFill))
         context.stroke(Path(roundedRect: rect, cornerRadius: 2), with: .color(Self.noteStroke), lineWidth: 1)
 
