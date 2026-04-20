@@ -14,28 +14,17 @@ struct NativeDiagramView: View {
 
     // MARK: - Colors
 
-    private static let headerColors: [String: SwiftUI.Color] = [
-        "class": SwiftUI.Color(red: 0.29, green: 0.56, blue: 0.85),
-        "struct": SwiftUI.Color(red: 0.48, green: 0.41, blue: 0.93),
-        "enum": SwiftUI.Color(red: 0.91, green: 0.66, blue: 0.22),
-        "protocol": SwiftUI.Color(red: 0.31, green: 0.78, blue: 0.47),
-        "actor": SwiftUI.Color(red: 0.88, green: 0.40, blue: 0.40),
-        "extension": SwiftUI.Color.gray,
-        "macro": SwiftUI.Color(red: 0.80, green: 0.40, blue: 0.80),
-        "warning": SwiftUI.Color(red: 1.0, green: 0.8, blue: 0.8)
-    ]
-
     private static let bodyFill = SwiftUI.Color(white: 0.98)
     private static let strokeColor = SwiftUI.Color(white: 0.2)
     private static let headerTextColor = SwiftUI.Color.white
     private static let bodyTextColor = SwiftUI.Color(white: 0.2)
 
-    // MARK: - Layout Constants
+    // MARK: - Layout Constants (forwarded to NativeDiagramGeometry)
 
-    private static let headerHeight: CGFloat = 36
-    private static let lineHeight: CGFloat = 18
-    private static let padding: CGFloat = 10
-    private static let cornerRadius: CGFloat = 4
+    private static let headerHeight = NativeDiagramGeometry.headerHeight
+    private static let lineHeight = NativeDiagramGeometry.lineHeight
+    private static let padding = NativeDiagramGeometry.padding
+    private static let cornerRadius = NativeDiagramGeometry.cornerRadius
 
     var body: some View {
         GeometryReader { geometry in
@@ -103,13 +92,10 @@ struct NativeDiagramView: View {
     // MARK: - Node Drawing
 
     private func drawNode(_ node: LayoutNode, isHovered: Bool, in context: inout GraphicsContext) {
-        let leftX = node.posX - node.width / 2
-        let topY = node.posY - node.height / 2
         let stereotype = node.stereotype ?? "class"
-        let color = Self.headerColors[stereotype] ?? Self.headerColors["class"]!
-        let rect = CGRect(x: leftX, y: topY, width: node.width, height: node.height)
-        let headerH = min(Self.headerHeight, node.height)
-        let headerRect = CGRect(x: leftX, y: topY, width: node.width, height: headerH)
+        let color = NativeDiagramGeometry.headerColor(for: stereotype)
+        let rect = NativeDiagramGeometry.nodeRect(for: node)
+        let headerRect = NativeDiagramGeometry.headerRect(for: node)
 
         drawNodeBox(rect: rect, headerRect: headerRect, color: color,
                     hasCompartments: !node.compartments.isEmpty, in: &context)
@@ -117,8 +103,9 @@ struct NativeDiagramView: View {
             context.stroke(Path(roundedRect: rect, cornerRadius: Self.cornerRadius),
                            with: .color(Self.strokeColor), lineWidth: 2.5)
         }
-        drawNodeLabels(node: node, topY: topY, stereotype: stereotype, in: &context)
-        drawNodeCompartments(node: node, leftX: leftX, startY: topY + headerH, in: &context)
+        drawNodeLabels(node: node, topY: rect.minY, stereotype: stereotype, in: &context)
+        drawNodeCompartments(node: node, leftX: rect.minX,
+                             startY: rect.minY + headerRect.height, in: &context)
     }
 
     private func drawNodeBox(
@@ -192,10 +179,7 @@ struct NativeDiagramView: View {
             path.addLine(to: CGPoint(x: point.posX, y: point.posY))
         }
 
-        let isDashed = edge.style == .realization || edge.style == .dependency
-        let strokeStyle = isDashed
-            ? StrokeStyle(lineWidth: 1.2, dash: [6, 3])
-            : StrokeStyle(lineWidth: 1.2)
+        let strokeStyle = NativeDiagramGeometry.strokeStyle(for: edge.style)
 
         context.stroke(path, with: .color(Self.strokeColor), style: strokeStyle)
 
@@ -224,40 +208,40 @@ struct NativeDiagramView: View {
     private func drawArrowhead(
         at tip: CGPoint, from prev: CGPoint, style: EdgeStyle, in context: inout GraphicsContext
     ) {
-        let angle = atan2(tip.y - prev.y, tip.x - prev.x)
-        let arrowLength: CGFloat = 12
-        let arrowWidth: CGFloat = 6
-        let leftPoint = CGPoint(x: tip.x + arrowLength * cos(angle + .pi - .pi / 6),
-                                y: tip.y + arrowLength * sin(angle + .pi - .pi / 6))
-        let rightPoint = CGPoint(x: tip.x + arrowLength * cos(angle + .pi + .pi / 6),
-                                 y: tip.y + arrowLength * sin(angle + .pi + .pi / 6))
+        let points = NativeDiagramGeometry.arrowheadPoints(tip: tip, prev: prev)
 
         switch style {
         case .inheritance, .realization:
             var path = Path()
-            path.move(to: tip); path.addLine(to: leftPoint); path.addLine(to: rightPoint); path.closeSubpath()
+            path.move(to: tip); path.addLine(to: points.left); path.addLine(to: points.right); path.closeSubpath()
             context.fill(path, with: .color(.white))
             context.stroke(path, with: .color(Self.strokeColor), lineWidth: 1)
         case .dependency:
             var path = Path()
-            path.move(to: leftPoint); path.addLine(to: tip); path.addLine(to: rightPoint)
+            path.move(to: points.left); path.addLine(to: tip); path.addLine(to: points.right)
             context.stroke(path, with: .color(Self.strokeColor), lineWidth: 1.5)
         case .composition:
-            drawDiamond(at: tip, angle: angle, length: arrowLength, width: arrowWidth, in: &context)
+            let angle = atan2(tip.y - prev.y, tip.x - prev.x)
+            drawDiamond(at: tip, angle: angle, in: &context)
         case .association:
             break
         }
     }
 
     private func drawDiamond(
-        at tip: CGPoint, angle: CGFloat, length: CGFloat, width: CGFloat, in context: inout GraphicsContext
+        at tip: CGPoint, angle: CGFloat, in context: inout GraphicsContext
     ) {
-        let mid = CGPoint(x: tip.x + length * cos(angle + .pi), y: tip.y + length * sin(angle + .pi))
-        let far = CGPoint(x: tip.x + length * 2 * cos(angle + .pi), y: tip.y + length * 2 * sin(angle + .pi))
-        let left = CGPoint(x: mid.x + width * cos(angle + .pi / 2), y: mid.y + width * sin(angle + .pi / 2))
-        let right = CGPoint(x: mid.x + width * cos(angle - .pi / 2), y: mid.y + width * sin(angle - .pi / 2))
+        let points = NativeDiagramGeometry.diamondPoints(
+            tip: tip, angle: angle,
+            length: NativeDiagramGeometry.arrowLength,
+            width: NativeDiagramGeometry.arrowWidth
+        )
         var path = Path()
-        path.move(to: tip); path.addLine(to: left); path.addLine(to: far); path.addLine(to: right); path.closeSubpath()
+        path.move(to: points.tip)
+        path.addLine(to: points.left)
+        path.addLine(to: points.far)
+        path.addLine(to: points.right)
+        path.closeSubpath()
         context.fill(path, with: .color(Self.strokeColor))
     }
 }
