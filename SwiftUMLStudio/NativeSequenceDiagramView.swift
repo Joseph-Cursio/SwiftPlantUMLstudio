@@ -54,6 +54,14 @@ struct NativeSequenceDiagramView: View {
                     viewport.hoveredNodeId = nil
                 }
             }
+            .focusable()
+            .focusEffectDisabled()
+            .onKeyPress(.leftArrow)  { handleArrow(.left) }
+            .onKeyPress(.rightArrow) { handleArrow(.right) }
+            .onKeyPress(.escape) {
+                viewport.selectedNodeId = nil
+                return .handled
+            }
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel("Sequence diagram canvas")
             .accessibilityHint("Double-tap to reset zoom and position")
@@ -89,6 +97,21 @@ struct NativeSequenceDiagramView: View {
                 viewport.selectedNodeId =
                     NativeSequenceGeometry.hitParticipant(in: layout, at: value.location)?.id
             }
+    }
+
+    private func handleArrow(_ direction: NativeDiagramGeometry.NavigationDirection) -> KeyPress.Result {
+        if let currentId = viewport.selectedNodeId,
+           let next = NativeSequenceGeometry.nextParticipant(
+                in: layout, from: currentId, direction: direction
+           ) {
+            viewport.selectedNodeId = next.id
+            return .handled
+        }
+        if let first = NativeSequenceGeometry.firstParticipant(in: layout) {
+            viewport.selectedNodeId = first.id
+            return .handled
+        }
+        return .ignored
     }
 
     // MARK: - Drawing

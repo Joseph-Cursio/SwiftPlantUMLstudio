@@ -61,6 +61,16 @@ struct NativeDiagramView: View {
                     viewport.hoveredNodeId = nil
                 }
             }
+            .focusable()
+            .focusEffectDisabled()
+            .onKeyPress(.upArrow)    { handleArrow(.up) }
+            .onKeyPress(.downArrow)  { handleArrow(.down) }
+            .onKeyPress(.leftArrow)  { handleArrow(.left) }
+            .onKeyPress(.rightArrow) { handleArrow(.right) }
+            .onKeyPress(.escape) {
+                viewport.selectedNodeId = nil
+                return .handled
+            }
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel("Class diagram canvas")
             .accessibilityHint("Double-tap to reset zoom and position")
@@ -96,6 +106,19 @@ struct NativeDiagramView: View {
                 viewport.selectedNodeId =
                     NativeDiagramGeometry.hitNode(in: graph, at: value.location)?.id
             }
+    }
+
+    private func handleArrow(_ direction: NativeDiagramGeometry.NavigationDirection) -> KeyPress.Result {
+        if let currentId = viewport.selectedNodeId,
+           let next = NativeDiagramGeometry.nextNode(in: graph, from: currentId, direction: direction) {
+            viewport.selectedNodeId = next.id
+            return .handled
+        }
+        if let first = NativeDiagramGeometry.firstNode(in: graph) {
+            viewport.selectedNodeId = first.id
+            return .handled
+        }
+        return .ignored
     }
 
     // MARK: - Node Drawing

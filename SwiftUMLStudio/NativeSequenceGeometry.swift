@@ -38,6 +38,34 @@ nonisolated enum NativeSequenceGeometry {
         }
     }
 
+    /// First (leftmost) participant — used as the starting selection when the
+    /// user presses left/right arrow with nothing selected.
+    static func firstParticipant(in layout: SequenceLayout) -> SequenceParticipant? {
+        layout.participants.min { $0.centerX < $1.centerX }
+    }
+
+    /// Sequence participants live on a single horizontal row, so left/right
+    /// step to the immediate neighbor and up/down are no-ops.
+    static func nextParticipant(
+        in layout: SequenceLayout,
+        from currentId: String,
+        direction: NativeDiagramGeometry.NavigationDirection
+    ) -> SequenceParticipant? {
+        guard let current = layout.participants.first(where: { $0.id == currentId }) else { return nil }
+        switch direction {
+        case .right:
+            return layout.participants
+                .filter { $0.centerX > current.centerX }
+                .min { $0.centerX < $1.centerX }
+        case .left:
+            return layout.participants
+                .filter { $0.centerX < current.centerX }
+                .max { $0.centerX < $1.centerX }
+        case .up, .down:
+            return nil
+        }
+    }
+
     // MARK: - Message classification
 
     /// Two messages are considered a self-call loop when the from/to X coordinates

@@ -53,6 +53,56 @@ nonisolated enum NativeDiagramGeometry {
         graph.nodes.reversed().first { nodeRect(for: $0).contains(point) }
     }
 
+    // MARK: - Arrow-key navigation
+
+    enum NavigationDirection: Sendable {
+        case up, down, left, right
+    }
+
+    /// The leftmost-topmost node in the graph. Used as the starting selection
+    /// when the user presses an arrow key with nothing selected.
+    static func firstNode(in graph: LayoutGraph) -> LayoutNode? {
+        graph.nodes.min { lhs, rhs in
+            (lhs.posY, lhs.posX) < (rhs.posY, rhs.posX)
+        }
+    }
+
+    /// The spatially-nearest node in `direction` from `currentId`, or `nil`
+    /// when no candidate exists. A candidate counts as "in" the direction when
+    /// its center is strictly past the current node's center along the
+    /// direction axis AND the dominant axis matches the direction (so a
+    /// node directly below doesn't count as a "right" candidate).
+    static func nextNode(
+        in graph: LayoutGraph,
+        from currentId: String,
+        direction: NavigationDirection
+    ) -> LayoutNode? {
+        guard let current = graph.nodes.first(where: { $0.id == currentId }) else { return nil }
+        let candidates = graph.nodes.filter { node in
+            node.id != currentId && isInDirection(direction, from: current, to: node)
+        }
+        return candidates.min { distanceSquared($0, current) < distanceSquared($1, current) }
+    }
+
+    private static func isInDirection(
+        _ direction: NavigationDirection, from origin: LayoutNode, to candidate: LayoutNode
+    ) -> Bool {
+        let dx = candidate.posX - origin.posX
+        let dy = candidate.posY - origin.posY
+        switch direction {
+        case .right: return dx > 0 && abs(dx) >= abs(dy)
+        case .left:  return dx < 0 && abs(dx) >= abs(dy)
+        case .down:  return dy > 0 && abs(dy) > abs(dx)
+        case .up:    return dy < 0 && abs(dy) > abs(dx)
+        }
+    }
+
+    private static func distanceSquared(_ lhs: LayoutNode, _ rhs: LayoutNode) -> Double {
+        let dx = lhs.posX - rhs.posX
+        let dy = lhs.posY - rhs.posY
+        return dx * dx + dy * dy
+    }
+
     /// Header-band rectangle (top strip of the node) clamped to the node height.
     static func headerRect(for node: LayoutNode) -> CGRect {
         let rect = nodeRect(for: node)
