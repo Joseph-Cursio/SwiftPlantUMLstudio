@@ -7,8 +7,6 @@ struct NativeDiagramView: View {
     let graph: LayoutGraph
     let viewport: DiagramViewport
 
-    @State private var hoveredNodeId: String?
-
     private static let canvasCoordinateSpace = "nativeDiagramCanvas"
 
     // MARK: - Colors
@@ -36,7 +34,7 @@ struct NativeDiagramView: View {
                     drawEdge(edge, in: &context)
                 }
                 for node in graph.nodes {
-                    let isHovered = hoveredNodeId == node.id
+                    let isHovered = viewport.hoveredNodeId == node.id
                     let isSelected = viewport.selectedNodeId == node.id
                     drawNode(node, isHovered: isHovered, isSelected: isSelected, in: &context)
                 }
@@ -49,6 +47,15 @@ struct NativeDiagramView: View {
             .gesture(dragGesture)
             .gesture(tapToSelectGesture)
             .onTapGesture(count: 2) { viewport.reset() }
+            .onContinuousHover(coordinateSpace: .named(Self.canvasCoordinateSpace)) { phase in
+                switch phase {
+                case .active(let location):
+                    viewport.hoveredNodeId =
+                        NativeDiagramGeometry.hitNode(in: graph, at: location)?.id
+                case .ended:
+                    viewport.hoveredNodeId = nil
+                }
+            }
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel("Class diagram canvas")
             .accessibilityHint("Double-tap to reset zoom and position")

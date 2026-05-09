@@ -14,6 +14,7 @@ final class DiagramViewport {
     var lastOffset: CGSize = .zero
 
     var selectedNodeId: String?
+    var hoveredNodeId: String?
 
     var contentSize: CGSize = .zero
     var visibleSize: CGSize = .zero

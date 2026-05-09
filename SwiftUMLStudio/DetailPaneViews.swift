@@ -110,10 +110,22 @@ struct DiagramPreviewView: View {
                 if let revealable = revealableSelection {
                     revealInSourceButton(for: revealable)
                 }
+
+                if let hovered = hoveredNode {
+                    NodeInfoTooltip(
+                        label: hovered.label,
+                        stereotype: hovered.stereotype,
+                        sourceLocation: hovered.sourceLocation
+                    )
+                    .padding(12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .allowsHitTesting(false)
+                }
             }
             .onChange(of: viewModel.currentScript?.text) { _, _ in
                 viewport.reset()
                 viewport.selectedNodeId = nil
+                viewport.hoveredNodeId = nil
             }
         }
     }
@@ -135,6 +147,15 @@ struct DiagramPreviewView: View {
               let location = node.sourceLocation
         else { return nil }
         return (node.label, location)
+    }
+
+    /// The class-diagram node currently under the cursor, if any. Drives the
+    /// `NodeInfoTooltip` overlay.
+    private var hoveredNode: LayoutNode? {
+        guard let id = viewport.hoveredNodeId,
+              let graph = viewModel.currentScript?.layoutGraph
+        else { return nil }
+        return graph.nodes.first { $0.id == id }
     }
 
     @ViewBuilder
