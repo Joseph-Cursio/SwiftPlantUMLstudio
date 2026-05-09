@@ -1,14 +1,29 @@
 # Explorer Mode Pivot Plan
 
+**Last updated:** 2026-05-09 (post-implementation refresh)
+
+## Status at a glance
+
+| Phase | Status | Notes |
+|---|---|---|
+| 1. StoreKit + Feature Gating | **Shipped** | `SubscriptionManager` (StoreKit 2), `FeatureGate`, `PaywallView`, `Configuration.storekit` all in place |
+| 2. Project Dashboard + Insights | **Shipped** | `ProjectAnalyzer`, `ProjectSummary`, `InsightEngine`, `SuggestionEngine`, `SuggestionDispatcher`, `ProjectDashboardView` all in place |
+| 3. Explorer Mode UI | **Shipped (mostly)** | `AppMode`, `ExplorerToolbar`, `ExplorerSidebar`, `ExplorerDetailView` are live. **Open gap: §3.4 plain-language labels ("Type Map" / "Execution Flow" / etc.) were never applied — `DiagramMode` cases still use developer terms.** |
+| 4. Architecture Change Tracking (Pro) | **Shipped** | `ProjectSnapshot`, `SnapshotManager`, `ArchitectureDiffView`, `ReviewReminderManager` |
+| 5. App Store Prep | **Pending** | No App Store submission yet — bundled into v1.0 release prep tasks |
+| 6. Distribution | **Pending** | Homebrew formula still in v1.0 prep; landing page / marketing not started |
+
+The phases below preserve the original plan as design context. Material drift from what shipped is called out inline.
+
 ## Overview
 
 Transform SwiftUMLStudio from a developer-only UML tool into a freemium codebase explorer that serves both developers and vibe-coders. The pivot adds an "Explorer Mode" as the default free experience, with the existing developer features becoming the paid "Pro" tier.
 
-This plan assumes v1.0 ships first with the current developer feature set. Explorer Mode is the v2.0 headline feature.
+> **Premise drift:** The original plan said "this plan assumes v1.0 ships first with the current developer feature set; Explorer Mode is the v2.0 headline feature." That inverted in practice — Phases 1–4 landed *before* the v1.0 release (which is still in prep). Explorer Mode is now part of the v1.0 launch, not a v2.0 follow-up.
 
 ---
 
-## Phase 1: Foundation — StoreKit & Feature Gating
+## Phase 1: Foundation — StoreKit & Feature Gating — **SHIPPED**
 
 **Goal:** Establish the subscription infrastructure before building new UI.
 
@@ -40,7 +55,7 @@ This plan assumes v1.0 ships first with the current developer feature set. Explo
 
 ---
 
-## Phase 2: Project Dashboard — The "Wow" Screen
+## Phase 2: Project Dashboard — The "Wow" Screen — **SHIPPED**
 
 **Goal:** When a user drops a folder, show an instant visual summary before any diagram is generated.
 
@@ -104,7 +119,7 @@ The dashboard appears immediately after folder selection, before any diagram is 
 
 ---
 
-## Phase 3: Explorer Mode UI
+## Phase 3: Explorer Mode UI — **SHIPPED (mostly; §3.4 still open)**
 
 **Goal:** Plain-language interface that makes diagrams approachable for non-developers.
 
@@ -130,7 +145,10 @@ Replace the current developer toolbar with simplified controls:
 - **Center pane:** Interactive diagram (same WebView, but no markup tab)
 - **Right sidebar (optional):** Selected type details — "This class has 3 properties and 5 methods, inherits from BaseController"
 
-### 3.4 Plain-Language Labels
+### 3.4 Plain-Language Labels — **NOT YET BUILT**
+
+**Status (2026-05-09):** This subsection is still future work. `DiagramMode` cases use developer terms ("Class Diagram", "Sequence Diagram", etc.) regardless of `AppMode`, and there is no Explorer-aware label-translation layer. To finish §3.4, add an `explorerLabel: String` property to `DiagramMode` and have the Explorer-mode toolbar / sidebar read that property; the developer mode keeps `rawValue` as today.
+
 All UI text changes based on mode:
 
 | Developer Term | Explorer Term |
@@ -150,7 +168,7 @@ All UI text changes based on mode:
 
 ---
 
-## Phase 4: Architecture Change Tracking (Pro)
+## Phase 4: Architecture Change Tracking (Pro) — **SHIPPED**
 
 **Goal:** Give subscribers a reason to come back regularly — track how their codebase evolves.
 
@@ -159,7 +177,7 @@ All UI text changes based on mode:
   - Type count, relationship count, module count
   - Per-type connection counts
   - Timestamp
-- Store snapshots in Core Data (extend `DiagramEntity` or new entity)
+- Store snapshots in **SwiftData** (a new `ProjectSnapshot` model alongside `DiagramEntity`). *(Plan originally said Core Data; the project migrated the persistence layer to SwiftData in commit `e192965`, so the actual implementation is SwiftData-backed.)*
 
 ### 4.2 Diff View
 - Compare current project state to a previous snapshot
@@ -171,13 +189,13 @@ All UI text changes based on mode:
 - Useful for teams doing regular architecture reviews
 
 ### Architecture Impact
-- New Core Data entity: `ProjectSnapshot`
+- New SwiftData model: `ProjectSnapshot` *(plan originally said Core Data — see §4.1 note)*
 - New files: `SnapshotManager.swift`, `ArchitectureDiffView.swift`
 - Dashboard gains a "Changes since..." section for Pro users
 
 ---
 
-## Phase 5: App Store Preparation
+## Phase 5: App Store Preparation — **PENDING**
 
 ### 5.1 App Store Assets
 - Screenshots showing both Explorer and Developer modes
@@ -198,7 +216,7 @@ All UI text changes based on mode:
 
 ---
 
-## Phase 6: Distribution & Growth
+## Phase 6: Distribution & Growth — **PENDING**
 
 ### 6.1 Channels
 - **Mac App Store:** Primary for vibe-coder discovery
@@ -220,16 +238,16 @@ All UI text changes based on mode:
 
 ## Implementation Sequence
 
-| Phase | Scope | Depends On |
-|---|---|---|
-| Phase 1 | StoreKit + feature gating | v1.0 shipped |
-| Phase 2 | Project dashboard + insights | Phase 1 |
-| Phase 3 | Explorer Mode UI | Phase 2 |
-| Phase 4 | Architecture change tracking | Phase 3 |
-| Phase 5 | App Store prep | Phase 3 |
-| Phase 6 | Distribution | Phase 5 |
+| Phase | Scope | Status | Notes |
+|---|---|---|---|
+| Phase 1 | StoreKit + feature gating | **Shipped** | Landed before v1.0 release prep, not after |
+| Phase 2 | Project dashboard + insights | **Shipped** | |
+| Phase 3 | Explorer Mode UI | **Shipped (mostly)** | §3.4 plain-language labels still TODO |
+| Phase 4 | Architecture change tracking | **Shipped** | SwiftData-backed (plan said Core Data) |
+| Phase 5 | App Store prep | Pending | Bundled into v1.0 release prep |
+| Phase 6 | Distribution | Pending | Homebrew formula still in v1.0 prep |
 
-Phases 1-3 are the MVP for the freemium launch. Phases 4-6 can follow iteratively.
+Original plan called Phases 1–3 the freemium MVP and Phases 4–6 post-launch. In practice Phases 1–4 all shipped together as part of the run-up to v1.0; the remaining work is purely the App Store + distribution side of §5–6.
 
 ---
 
