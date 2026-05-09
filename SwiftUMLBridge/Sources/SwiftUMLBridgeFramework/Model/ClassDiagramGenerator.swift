@@ -64,6 +64,27 @@ public struct ClassDiagramGenerator: ClassDiagramGenerating, @unchecked Sendable
         return generateScript(for: files, with: configuration, sdkPath: sdkPath)
     }
 
+    /// Generate a module-aware diagram from a parsed SPM package description.
+    /// Each type is tagged with its owning target name; downstream emitters
+    /// surface that as an additional stereotype (PlantUML) so cross-module
+    /// architecture is visible in the rendered diagram.
+    public func generateScript(
+        forPackage description: SPMPackageDescription,
+        packageRoot: URL,
+        with configuration: Configuration = .default,
+        sdkPath: String? = nil
+    ) -> DiagramScript {
+        let pathToModule = description.sourceFileToModuleMap(packageRoot: packageRoot)
+        var allValidItems: [SyntaxStructure] = []
+        for (path, module) in pathToModule {
+            let url = URL(fileURLWithPath: path)
+            if let validItems = SyntaxStructure.create(from: url, sdkPath: sdkPath, module: module)?.substructure {
+                allValidItems.append(contentsOf: validItems)
+            }
+        }
+        return DiagramScript(items: allValidItems, configuration: configuration)
+    }
+
     /// Analyze types in the given paths without generating diagram output.
     /// Returns lightweight TypeInfo structs for project-level analysis.
     public func analyzeTypes(

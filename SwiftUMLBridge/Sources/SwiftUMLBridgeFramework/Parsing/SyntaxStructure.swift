@@ -60,6 +60,11 @@ internal class SyntaxStructure: NSObject, Codable, @unchecked Sendable {
     /// any structure decoded from JSON.
     internal var sourceLocation: SourceLocation?
 
+    /// SPM target / module the declaration belongs to. Populated by
+    /// `SyntaxStructureProvider.create(from:sdkPath:module:)` when the caller
+    /// knows the source file's owning target; nil otherwise.
+    internal var module: String?
+
     private enum CodingKeys: String, CodingKey {
         case accessibility = "key.accessibility"
         case attribute = "key.attribute"

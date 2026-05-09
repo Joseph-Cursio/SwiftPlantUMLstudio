@@ -9,13 +9,17 @@ internal extension SyntaxStructure {
 
     /// Parse a Swift source file from disk. Runs a SourceKit typename supplement
     /// whenever a file URL or SDK path is available.
-    static func create(from fileOnDisk: URL, sdkPath: String? = nil) -> SyntaxStructure? {
+    static func create(
+        from fileOnDisk: URL,
+        sdkPath: String? = nil,
+        module: String? = nil
+    ) -> SyntaxStructure? {
         let methodStart = Date()
         guard let source = try? String(contentsOf: fileOnDisk, encoding: .utf8) else {
             BridgeLogger.shared.error("not able to read contents of file \(fileOnDisk)")
             return nil
         }
-        let structure = build(from: source, sdkPath: sdkPath, fileURL: fileOnDisk)
+        let structure = build(from: source, sdkPath: sdkPath, fileURL: fileOnDisk, module: module)
         let elapsed = Date().timeIntervalSince(methodStart)
         let sdkLabel = (sdkPath != nil && !sdkPath!.isEmpty) ? "parsing with SDK" : ""
         BridgeLogger.shared.debug("read \(fileOnDisk) \(sdkLabel) in \(elapsed)")
@@ -24,8 +28,8 @@ internal extension SyntaxStructure {
 
     /// Parse Swift source from an in-memory string. Runs a SourceKit typename
     /// supplement (without SDK) to resolve inferred variable types.
-    static func create(from contents: String) -> SyntaxStructure? {
-        build(from: contents, sdkPath: nil, fileURL: nil)
+    static func create(from contents: String, module: String? = nil) -> SyntaxStructure? {
+        build(from: contents, sdkPath: nil, fileURL: nil, module: module)
     }
 
     // MARK: - Core build pipeline
@@ -33,7 +37,8 @@ internal extension SyntaxStructure {
     private static func build(
         from source: String,
         sdkPath: String?,
-        fileURL: URL?
+        fileURL: URL?,
+        module: String? = nil
     ) -> SyntaxStructure? {
         // Step 1 — optional SourceKit pass for inferred variable typenames
         let typenameMap = buildTypenameMap(from: source, sdkPath: sdkPath)
@@ -46,7 +51,8 @@ internal extension SyntaxStructure {
             viewMode: .sourceAccurate,
             typenameMap: typenameMap,
             filePath: filePath,
-            locationConverter: converter
+            locationConverter: converter,
+            module: module
         )
         builder.walk(sourceFile)
 

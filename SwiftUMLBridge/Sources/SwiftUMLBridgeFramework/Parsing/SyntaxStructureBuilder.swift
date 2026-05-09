@@ -30,28 +30,38 @@ final class SyntaxStructureBuilder: SyntaxVisitor {
     /// no converter was provided (in which case `sourceLocation` is left unset).
     private let locationConverter: SourceLocationConverter?
 
+    /// SPM target / module the file belongs to. Stamped onto each top-level
+    /// declaration so downstream layers can render module-qualified diagrams.
+    private let module: String?
+
     init(
         viewMode: SyntaxTreeViewMode = .sourceAccurate,
         typenameMap: [String: String] = [:],
         filePath: String = "",
-        locationConverter: SourceLocationConverter? = nil
+        locationConverter: SourceLocationConverter? = nil,
+        module: String? = nil
     ) {
         self.typenameMap = typenameMap
         self.filePath = filePath
         self.locationConverter = locationConverter
+        self.module = module
         super.init(viewMode: viewMode)
     }
 
     /// Capture the 1-based line/column of `node`'s identifier and stamp it onto
-    /// `structure.sourceLocation`. No-op if no `locationConverter` was supplied.
+    /// `structure.sourceLocation` (and `module` from this builder's context).
+    /// `sourceLocation` is left nil if no `locationConverter` was supplied;
+    /// `module` is left nil if no module was supplied.
     private func stampLocation(on structure: SyntaxStructure, at position: AbsolutePosition) {
-        guard let converter = locationConverter else { return }
-        let position = converter.location(for: position)
-        structure.sourceLocation = SwiftUMLBridgeFramework.SourceLocation(
-            filePath: filePath,
-            line: position.line,
-            column: position.column
-        )
+        if let converter = locationConverter {
+            let resolved = converter.location(for: position)
+            structure.sourceLocation = SwiftUMLBridgeFramework.SourceLocation(
+                filePath: filePath,
+                line: resolved.line,
+                column: resolved.column
+            )
+        }
+        structure.module = module
     }
 
     // MARK: - Type stack

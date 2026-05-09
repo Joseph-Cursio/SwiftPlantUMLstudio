@@ -29,6 +29,9 @@ extension SwiftUMLBridgeCLI {
         @Option(help: "macOS SDK path for type inference resolution (e.g. `$(xcrun --show-sdk-path -sdk macosx)`)")
         var sdk: String?
 
+        @Option(help: "Path to a Package.swift directory. Activates module-aware mode: each type is tagged with its SPM target and rendered with a module stereotype. Overrides any positional `paths` arguments.")
+        var package: String?
+
         @Flag(help: "Decide if/how Swift extensions appear in the diagram")
         var extensionVisualization: ExtensionVisualizationFlag = .showExtensions
 
@@ -62,27 +65,38 @@ extension SwiftUMLBridgeCLI {
 
             BridgeLogger.shared.info("SDK: \(sdk ?? "no SDK path provided")")
 
+            let generator = ClassDiagramGenerator()
+            let presenter = makePresenter()
+
+            if let packagePath = package {
+                let packageRoot = URL(fileURLWithPath: packagePath)
+                let description = try SPMPackageReader.describe(at: packageRoot)
+                BridgeLogger.shared.info(
+                    "Loaded SPM package '\(description.name)' with \(description.targets.count) target(s)"
+                )
+                let script = generator.generateScript(
+                    forPackage: description,
+                    packageRoot: packageRoot,
+                    with: bridgeConfig,
+                    sdkPath: sdk
+                )
+                await presenter.present(script: script)
+                return
+            }
+
             let directory = FileManager.default.currentDirectoryPath
             let files = FileCollector().getFiles(for: paths, in: directory, honoring: bridgeConfig.files)
+            await generator.generate(
+                for: files.map(\.path), with: bridgeConfig,
+                presentedBy: presenter, sdkPath: sdk
+            )
+        }
 
-            let generator = ClassDiagramGenerator()
-
+        private func makePresenter() -> any DiagramPresenting {
             switch output {
-            case .browserImageOnly:
-                await generator.generate(
-                    for: files.map(\.path), with: bridgeConfig,
-                    presentedBy: BrowserPresenter(format: .png), sdkPath: sdk
-                )
-            case .consoleOnly:
-                await generator.generate(
-                    for: files.map(\.path), with: bridgeConfig,
-                    presentedBy: ConsolePresenter(), sdkPath: sdk
-                )
-            default:
-                await generator.generate(
-                    for: files.map(\.path), with: bridgeConfig,
-                    presentedBy: BrowserPresenter(format: .default), sdkPath: sdk
-                )
+            case .browserImageOnly: return BrowserPresenter(format: .png)
+            case .consoleOnly:      return ConsolePresenter()
+            default:                return BrowserPresenter(format: .default)
             }
         }
     }

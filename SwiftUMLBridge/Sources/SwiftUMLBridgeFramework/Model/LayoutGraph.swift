@@ -29,6 +29,11 @@ public struct LayoutNode: Identifiable, Sendable {
     /// derived from a `DependencyGraphModel` that has no per-node source).
     public var sourceLocation: SourceLocation?
 
+    /// SPM target / module the type belongs to, when the diagram was generated
+    /// from a parsed `SPMPackageDescription`. `nil` for diagrams generated
+    /// from loose files.
+    public var module: String?
+
     /// Center X (set by layout engine)
     public var posX: Double = 0
     /// Center Y (set by layout engine)
@@ -41,13 +46,15 @@ public struct LayoutNode: Identifiable, Sendable {
         label: String,
         stereotype: String? = nil,
         compartments: [NodeCompartment] = [],
-        sourceLocation: SourceLocation? = nil
+        sourceLocation: SourceLocation? = nil,
+        module: String? = nil
     ) {
         self.id = id
         self.label = label
         self.stereotype = stereotype
         self.compartments = compartments
         self.sourceLocation = sourceLocation
+        self.module = module
     }
 }
 
