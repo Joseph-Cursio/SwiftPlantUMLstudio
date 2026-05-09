@@ -9,6 +9,17 @@ public protocol ClassDiagramGenerating: Sendable {
         with configuration: Configuration,
         sdkPath: String?
     ) -> DiagramScript
+
+    /// Module-aware entry. Default implementation falls back to the path-based
+    /// `generateScript(for:with:sdkPath:)` over all source files in the package
+    /// — concrete generators (notably `ClassDiagramGenerator`) override to also
+    /// stamp `LayoutNode.module` with each type's owning target.
+    func generateScript(
+        forPackage description: SPMPackageDescription,
+        packageRoot: URL,
+        with configuration: Configuration,
+        sdkPath: String?
+    ) -> DiagramScript
 }
 
 /// Default parameter for sdkPath so callers don't need to pass it.
@@ -18,6 +29,16 @@ public extension ClassDiagramGenerating {
         with configuration: Configuration
     ) -> DiagramScript {
         generateScript(for: paths, with: configuration, sdkPath: nil)
+    }
+
+    func generateScript(
+        forPackage description: SPMPackageDescription,
+        packageRoot: URL,
+        with configuration: Configuration,
+        sdkPath: String? = nil
+    ) -> DiagramScript {
+        let paths = description.sourceFileToModuleMap(packageRoot: packageRoot).keys.sorted()
+        return generateScript(for: paths, with: configuration, sdkPath: sdkPath)
     }
 }
 

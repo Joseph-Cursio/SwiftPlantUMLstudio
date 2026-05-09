@@ -134,6 +134,9 @@ struct ContentView: View {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Open…", systemImage: "folder", action: openPanel)
                     .help("Open Swift files or directories (⌘O)")
+                Button("Open Package…", systemImage: "shippingbox", action: openPackagePanel)
+                    .help("Open an SPM package directory (⇧⌘O)")
+                    .keyboardShortcut("o", modifiers: [.command, .shift])
 
                 Text(viewModel.pathSummary)
                     .foregroundStyle(.secondary)
@@ -180,8 +183,26 @@ struct ContentView: View {
         panel.canSelectHiddenExtension = true
 
         guard panel.runModal() == .OK else { return }
+        viewModel.unloadPackage()
         viewModel.selectedPaths = panel.urls.map { $0.path() }
         viewModel.generate()
+    }
+
+    private func openPackagePanel() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose the directory that contains your Package.swift"
+        panel.prompt = "Open Package"
+
+        guard panel.runModal() == .OK, let url = panel.urls.first else { return }
+        Task {
+            await viewModel.loadPackage(at: url)
+            if viewModel.packageDescription != nil {
+                viewModel.generate()
+            }
+        }
     }
 }
 

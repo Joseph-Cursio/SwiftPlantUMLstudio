@@ -40,6 +40,15 @@ final class DiagramViewModel {
     /// `revealSource(at:)`; cleared whenever the user manually selects a file.
     var highlightedSourceLine: Int?
 
+    /// Set by `loadPackage(at:)` when the user opens an SPM package directory.
+    /// Generation dispatches to the package-aware entry point so each type is
+    /// stamped with its owning target.
+    var packageRoot: URL?
+    var packageDescription: SPMPackageDescription?
+    /// Surfaced via the failure alert when SPMPackageReader.describe(at:)
+    /// throws (swift toolchain missing, malformed manifest, etc.).
+    var packageLoadError: String?
+
     var history: [DiagramEntity] = []
     var selectedHistoryItem: DiagramEntity?
 
@@ -287,6 +296,34 @@ final class DiagramViewModel {
         let url = URL(fileURLWithPath: location.filePath)
         selectFile(url)
         highlightedSourceLine = location.line
+    }
+
+    /// Load an SPM package from disk and switch class-diagram generation into
+    /// module-aware mode. The package root is the directory containing
+    /// `Package.swift`. Runs `swift package describe --type json` off the main
+    /// actor since the underlying Process call blocks.
+    func loadPackage(at packageRoot: URL) async {
+        packageLoadError = nil
+        let result = await Task.detached(priority: .userInitiated) {
+            try? SPMPackageReader.describe(at: packageRoot)
+        }.value
+        guard let description = result else {
+            packageLoadError = "Failed to read SPM package at \(packageRoot.lastPathComponent). Make sure `swift package describe` succeeds in this directory."
+            return
+        }
+        self.packageRoot = packageRoot
+        self.packageDescription = description
+        // Replace whatever loose-files selection was active with the package's
+        // own source paths so other generators (sequence, deps) keep working.
+        let sourcePaths = description.sourceFileToModuleMap(packageRoot: packageRoot).keys.sorted()
+        self.selectedPaths = sourcePaths
+    }
+
+    /// Clear the loaded package so generation falls back to loose files.
+    func unloadPackage() {
+        packageRoot = nil
+        packageDescription = nil
+        packageLoadError = nil
     }
 
     func refreshEntryPoints() {

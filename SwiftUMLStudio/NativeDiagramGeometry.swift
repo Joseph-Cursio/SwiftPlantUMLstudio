@@ -35,6 +35,16 @@ nonisolated enum NativeDiagramGeometry {
         return headerColors[key] ?? headerColors["class"] ?? SwiftUI.Color.gray
     }
 
+    /// Deterministic color for a module name — hashes the name into a hue so
+    /// the same module gets the same swatch on every render. Used by the
+    /// native canvas to draw a thin colored stripe along the bottom of each
+    /// node when it carries a `module` value.
+    static func moduleColor(for module: String) -> SwiftUI.Color {
+        let hash = module.unicodeScalars.reduce(0) { $0 &+ Int($1.value) }
+        let hue = Double(hash % 360) / 360.0
+        return SwiftUI.Color(hue: hue, saturation: 0.55, brightness: 0.85)
+    }
+
     // MARK: - Node geometry
 
     /// Bounding rectangle of a laid-out node in canvas coordinates.

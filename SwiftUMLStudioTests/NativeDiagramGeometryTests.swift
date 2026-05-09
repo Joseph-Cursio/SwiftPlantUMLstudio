@@ -31,6 +31,24 @@ struct NativeDiagramGeometryHeaderColorTests {
     }
 }
 
+@Suite("NativeDiagramGeometry.moduleColor")
+struct NativeDiagramGeometryModuleColorTests {
+
+    @Test("returns the same color for the same module name")
+    func deterministic() {
+        let first = NativeDiagramGeometry.moduleColor(for: "Networking")
+        let second = NativeDiagramGeometry.moduleColor(for: "Networking")
+        #expect(first == second)
+    }
+
+    @Test("different modules generally get different colors")
+    func variesAcrossModules() {
+        let networking = NativeDiagramGeometry.moduleColor(for: "Networking")
+        let ui = NativeDiagramGeometry.moduleColor(for: "UI")
+        #expect(networking != ui)
+    }
+}
+
 @Suite("NativeDiagramGeometry.nodeRect + headerRect")
 struct NativeDiagramGeometryNodeRectTests {
 

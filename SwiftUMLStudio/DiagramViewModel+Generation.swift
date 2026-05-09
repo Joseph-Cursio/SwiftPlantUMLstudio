@@ -15,11 +15,21 @@ extension DiagramViewModel {
 
         let paths = selectedPaths
         let format = diagramFormat
+        let packageDescription = self.packageDescription
+        let packageRoot = self.packageRoot
 
         let generator = classGenerator
         let result = await Task.detached(priority: .userInitiated) {
             var config = Configuration.default
             config.format = format
+            if let packageDescription, let packageRoot {
+                return generator.generateScript(
+                    forPackage: packageDescription,
+                    packageRoot: packageRoot,
+                    with: config,
+                    sdkPath: nil
+                )
+            }
             return generator.generateScript(for: paths, with: config)
         }.value
 

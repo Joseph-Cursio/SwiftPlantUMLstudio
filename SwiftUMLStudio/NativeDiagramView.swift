@@ -133,6 +133,9 @@ struct NativeDiagramView: View {
 
         drawNodeBox(rect: rect, headerRect: headerRect, color: color,
                     hasCompartments: !node.compartments.isEmpty, in: &context)
+        if let module = node.module {
+            drawModuleStripe(rect: rect, module: module, in: &context)
+        }
         if isSelected {
             context.stroke(Path(roundedRect: rect.insetBy(dx: -2, dy: -2),
                                 cornerRadius: Self.cornerRadius + 2),
@@ -144,6 +147,28 @@ struct NativeDiagramView: View {
         drawNodeLabels(node: node, topY: rect.minY, stereotype: stereotype, in: &context)
         drawNodeCompartments(node: node, leftX: rect.minX,
                              startY: rect.minY + headerRect.height, in: &context)
+    }
+
+    /// Thin colored stripe along the bottom edge of the node box, with the
+    /// module name centered on it. Each module gets a deterministic color
+    /// derived from its name (see `NativeDiagramGeometry.moduleColor(for:)`).
+    private func drawModuleStripe(rect: CGRect, module: String, in context: inout GraphicsContext) {
+        let stripeHeight: CGFloat = 14
+        let stripeRect = CGRect(
+            x: rect.minX, y: rect.maxY - stripeHeight,
+            width: rect.width, height: stripeHeight
+        )
+        let path = Path { path in
+            path.addRoundedRect(in: stripeRect, cornerRadii: RectangleCornerRadii(
+                topLeading: 0, bottomLeading: Self.cornerRadius,
+                bottomTrailing: Self.cornerRadius, topTrailing: 0
+            ))
+        }
+        context.fill(path, with: .color(NativeDiagramGeometry.moduleColor(for: module)))
+        let label = Text(module)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(SwiftUI.Color.white)
+        context.draw(label, at: CGPoint(x: stripeRect.midX, y: stripeRect.midY), anchor: .center)
     }
 
     private func drawNodeBox(
