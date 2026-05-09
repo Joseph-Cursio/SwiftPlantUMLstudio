@@ -34,6 +34,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`SourceLocation` on `LayoutNode`** — public framework type carrying file path + 1-based line/column, populated by `SyntaxStructureBuilder` from a SwiftSyntax `SourceLocationConverter` for class / struct / enum / actor / protocol / extension declarations
 - **"Reveal in Source"** floating button (⌘J) — when a node with a known `sourceLocation` is selected, opens the file in the developer-layout source pane, scrolls to the line, and highlights it in yellow
 - **`SourceEditorView` rewritten** as an `NSViewRepresentable` around `NSTextView` to support line scrolling and back-fill highlighting (replaces the previous disabled `TextEditor`)
+- **Hover tooltips** on class-diagram nodes — top-leading floating panel showing the node's stereotype, label, and (when available) the source `filename:line`
+- **Diagram export menu** (top-trailing) — saves the currently-displayed diagram as PDF (vector, via SwiftUI `ImageRenderer` + `CGContext` PDF consumer), PNG (raster, 2× retina), SVG (when the script's format is already SVG), or source text (`.puml` / `.mmd` / `.nomnoml`) for WebView-rendered formats. Menu items adapt to what the active script supports.
+
+### Changed — Theming
+
+- **Dark mode polish across native canvases and WebViews.** Native renderers now use `Color(nsColor: .labelColor)` / `.controlBackgroundColor` / `.textBackgroundColor` instead of hardcoded near-white/near-black values, so diagrams render correctly in dark mode. Activity-diagram start/end terminals and fork/join bars switched from a near-black fill (which disappeared into the dark background) to `.labelColor`. Mermaid in `DiagramWebView` now reads `colorScheme` and emits `theme: 'dark'` with a dark page background when applicable; Nomnoml and the SVG fallback adapt their page background. PlantUML remote rendering remains light-only (planttext.com is outside our control); Nomnoml's canvas content also stays light because nomnoml.js draws with hardcoded colors — both documented as known limitations.
 
 ### Added — Studio App
 
