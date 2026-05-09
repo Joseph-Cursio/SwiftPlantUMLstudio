@@ -4,11 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**SwiftUMLStudio** is a macOS SwiftUI app (GUI studio) that serves as a front-end for **SwiftUMLBridge** — a Swift-native CLI tool and Swift Package that generates architectural diagrams (PlantUML, Mermaid.js) from Swift source code. SwiftUMLBridge modernizes and extends SwiftPlantUML with support for Swift 5.9+ features (actors, async/await, macros).
+This repository contains two related products built around the same diagram-generation engine:
 
-This repository is in early development (day 0). The PRD lives in `docs/SwiftUML Studio PRD.md`.
+- **SwiftUMLBridge** — a Swift-native CLI (`swiftumlbridge`) and Swift Package that generates architectural diagrams from Swift source. A modern, Swift 6 evolution of SwiftPlantUML with support for actors, async/await, macros, and multi-format output.
+- **SwiftUMLStudio** — a macOS SwiftUI application that embeds SwiftUMLBridge and provides an interactive workspace with persistent snapshots, native-canvas rendering, architectural insights, and a paid (StoreKit) tier.
+
+**Status (2026-05)**: post-M10 (Swift 6 strict concurrency). M0–M10 shipped. Currently preparing the Bridge v1.0 release (CHANGELOG sync, .spi.yml, Homebrew formula, migration guide). See `docs/internal/SwiftUML Studio PRD.md` for the canonical spec — sections 5 (Bridge) and 6 (Studio) — and `CHANGELOG.md` for shipped scope.
 
 ## Build & Test Commands
+
+### macOS Studio app (Xcode project)
 
 ```bash
 # Build
@@ -26,44 +31,80 @@ xcodebuild test -scheme SwiftUMLStudio -destination 'platform=macOS,arch=arm64' 
   -only-testing:SwiftUMLStudioUITests/SwiftUMLStudioUITests/<TestName>
 ```
 
-- **Target platform**: macOS 26.4+, `SDKROOT = macosx`
+### SwiftUMLBridge package (CLI + framework)
+
+```bash
+# Build & test the package directly (faster iteration than xcodebuild)
+swift build --package-path SwiftUMLBridge
+swift test  --package-path SwiftUMLBridge
+
+# Run the CLI from a checkout
+swift run --package-path SwiftUMLBridge swiftumlbridge classdiagram <paths...>
+```
+
+- **Studio target platform**: macOS 26.4+, `SDKROOT = macosx`
+- **Bridge target platform**: macOS 26+ (per `Package.swift`; tighten if Linux support is added)
+- **Swift toolchain**: Swift 6.0 strict concurrency enabled across all targets
 - **Bundle ID**: `name.JosephCursio.SwiftUMLStudio`
 
 ## Architecture
 
-### Planned Three-Layer Architecture (per PRD)
+### Three-Layer Engine (SwiftUMLBridge)
 
 ```
 Parsing Layer  →  Model Layer  →  Emitter Layer
-(SourceKitten)    (language-      (PlantUML /
-                   agnostic        Mermaid.js /
-                   AST/graph)      DOT emitters)
+SourceKitten      Language-       PlantUML /
+SwiftSyntax       agnostic AST    Mermaid.js /
+                  + graphs        Nomnoml
 ```
 
-1. **Parsing Layer** — wraps SourceKitten to extract the Swift AST and resolve types. Must track each Swift toolchain release.
-2. **Model Layer** — language-agnostic representation of types, relationships, and call graphs (stored as graph structures).
-3. **Emitter Layer** — format-specific emitters. Adding a new output format requires only a new emitter implementation.
+1. **Parsing Layer** (`SwiftUMLBridge/Sources/SwiftUMLBridgeFramework/Parsing/`) — wraps SourceKitten and SwiftSyntax to extract Swift declarations, call graphs, control flow, and import edges. Must track each Swift toolchain release.
+2. **Model Layer** (`Model/`) — language-agnostic representation of types, relationships, call graphs, control-flow graphs, and SwiftData ER models.
+3. **Emitter Layer** (`Emitters/`) — format-specific emitters. Adding a new output format requires only a new emitter implementation. The Studio app additionally consumes the model layer through native SwiftUI / Core Graphics renderers, bypassing string emission.
 
-The **CLI** (`swiftumlbridge`) is a thin wrapper over the framework. The **macOS Studio app** (`SwiftUMLStudio`) is a SwiftUI GUI front-end over the same framework.
+The **CLI** (`swiftumlbridge`) is a thin wrapper over the framework using `AsyncParsableCommand`. The **macOS Studio app** embeds the same framework as a Swift Package dependency.
 
-### CLI Commands (planned)
+### CLI Commands
 
 ```
-swiftumlbridge classdiagram [paths...] [--format plantuml|mermaid] [--output browser|console|file]
-swiftumlbridge sequence --entry <Type.method> [paths...] [--depth n]
-swiftumlbridge deps [paths...] [--modules] [--types]
+swiftumlbridge classdiagram [paths...] [--format plantuml|mermaid|nomnoml] [--output browser|console|file]
+swiftumlbridge sequence    --entry <Type.method> [paths...] [--depth n]
+swiftumlbridge activity    --entry <Type.method> [paths...]
+swiftumlbridge state       [paths...]
+swiftumlbridge er          [paths...]
+swiftumlbridge deps        [paths...] [--modules] [--types] [--public-only] [--exclude <pattern>]
 ```
 
-### Key Planned Dependencies
+### Studio App Layout (`SwiftUMLStudio/`)
+
+- **Modes** (`AppMode.swift`): Document, Explorer, Project — each with its own sidebar/toolbar/detail views
+- **State**: `@Observable DiagramViewModel` (`DiagramViewModel.swift`, `DiagramViewModel+Generation.swift`)
+- **Persistence**: SwiftData via `PersistenceController`, `DiagramEntity`, `ProjectSnapshot`, `SnapshotManager`
+- **Rendering**: native `NativeDiagramView` / `NativeSequenceDiagramView` / `NativeActivityDiagramView`; WebView fallback (`DiagramWebView`, `MermaidHTMLBuilder`, `NomnomlHTMLBuilder`)
+- **Subscription / paywall**: `SubscriptionManager` (StoreKit 2), `SubscriptionProviding`, `FeatureGate`, `PaywallView`, `Configuration.storekit`
+- **Insights**: `ProjectAnalyzer`, `InsightEngine`, `SuggestionEngine`, `SuggestionDispatcher` surfaced through `ProjectDashboardView` and `ArchitectureDiffView`
+
+### Key Dependencies
 
 | Dependency | Role |
 |---|---|
-| SourceKitten | Swift AST parsing |
-| Swift Argument Parser | CLI |
-| Yams | YAML config parsing |
+| SourceKitten | Swift AST parsing (declarations, types) |
+| swift-syntax / SwiftParser | Call graph + control flow extraction (M5 primary parser) |
+| swift-argument-parser | CLI |
+| Yams (6.0+) | YAML config parsing |
+| SwiftData | Studio persistence |
+| StoreKit 2 | Studio subscriptions |
+| WebKit | Studio diagram fallback |
 
 ## Testing
 
-- **Unit tests** use the **Swift Testing** framework (`import Testing`, `@Test`, `#expect`). Do not use XCTest for new unit tests.
+- **Unit tests** use the **Swift Testing** framework (`import Testing`, `@Test`, `#expect`, `#require`). Do not use XCTest for new unit tests.
 - **UI tests** use XCTest (`SwiftUMLStudioUITests`).
-- Target ≥ 80% test coverage per the PRD.
+- The Bridge package has its own test target (`SwiftUMLBridgeFrameworkTests`) — runs via `swift test --package-path SwiftUMLBridge`.
+- Coverage targets: ≥ 80% for the Bridge package, ≥ 70% for the Studio app (including UI tests). Bridge currently sits ~89%.
+
+## Conventions
+
+- Follow `.swiftlint.yml` — fix violations rather than disabling rules. Identifier names should be 3+ chars (`database` not `db`, `identifier` not `id`).
+- Make small, focused commits — one logical change per commit. Each commit should build cleanly and pass tests before the next.
+- Use the task list (`TaskCreate` / `TaskUpdate`) for multi-step work.
