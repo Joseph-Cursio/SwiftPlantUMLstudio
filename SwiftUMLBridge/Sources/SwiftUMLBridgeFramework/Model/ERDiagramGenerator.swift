@@ -29,12 +29,17 @@ public struct ERDiagramGenerator: ERDiagramGenerating, @unchecked Sendable {
         }
 
         // Step 2 — fall through to SwiftData @Model parsing for everything else.
-        let files = FileCollector().getFiles(for: swiftSourcePaths)
-        for file in files {
-            guard let source = try? String(contentsOf: file, encoding: .utf8) else { continue }
-            let model = ERModelExtractor.extract(from: source)
-            mergeIn(model, entities: &entities, relationships: &relationships,
-                    seenEntity: &seenEntity, seenRelationship: &seenRelationship)
+        // Skip the FileCollector pass entirely when there are no Swift sources;
+        // FileCollector defaults to the cwd on an empty list, which produces
+        // a runaway directory walk under sandboxed test hosts.
+        if !swiftSourcePaths.isEmpty {
+            let files = FileCollector().getFiles(for: swiftSourcePaths)
+            for file in files {
+                guard let source = try? String(contentsOf: file, encoding: .utf8) else { continue }
+                let model = ERModelExtractor.extract(from: source)
+                mergeIn(model, entities: &entities, relationships: &relationships,
+                        seenEntity: &seenEntity, seenRelationship: &seenRelationship)
+            }
         }
 
         let merged = ERModel(entities: entities, relationships: relationships)

@@ -179,8 +179,9 @@ struct ContentView: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = true
-        panel.allowedContentTypes = [.swiftSource]
+        panel.allowedContentTypes = [.swiftSource, .coreDataModelBundle].compactMap { $0 }
         panel.canSelectHiddenExtension = true
+        panel.message = "Select Swift sources, directories, or a Core Data .xcdatamodeld bundle"
 
         guard panel.runModal() == .OK else { return }
         viewModel.unloadPackage()
@@ -208,6 +209,17 @@ struct ContentView: View {
 
 extension Notification.Name {
     static let openFile = Notification.Name("openFile")
+}
+
+extension UTType {
+    /// Core Data model bundle (.xcdatamodeld). Created lazily from the
+    /// filename extension because the registered system UTI is
+    /// `com.apple.xcode.coredata-momd` and may not be available unless
+    /// Xcode is installed; the extension-based form is always recognised.
+    static var coreDataModelBundle: UTType? {
+        UTType(filenameExtension: "xcdatamodeld")
+            ?? UTType("com.apple.xcode.coredata-momd")
+    }
 }
 
 #Preview {
