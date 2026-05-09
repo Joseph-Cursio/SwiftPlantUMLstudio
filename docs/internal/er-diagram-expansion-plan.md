@@ -1,7 +1,7 @@
 # ER Diagram Expansion — Implementation Plan
 
-**Last updated:** 2026-05-09
-**Status:** proposed
+**Last updated:** 2026-05-09 (post-implementation)
+**Status:** **shipped** — all four code milestones (C1, C2, G1, G2) and the doc-cleanup milestone (D) landed 2026-05-09. The plan body below is preserved as design context.
 
 ## Context
 
@@ -215,15 +215,15 @@ No new view files. The existing `NativeDiagramView` rendering covers the existin
 
 ## 5. Milestones
 
-| Milestone | Scope                                                                  | Estimate |
-|-----------|------------------------------------------------------------------------|----------|
-| **C1**    | Core Data: `CoreDataModelExtractor` + fixtures + emitter wiring + `swiftumlbridge er` accepts `.xcdatamodeld` | 1–2 days |
-| **C2**    | Studio: file-picker accepts `.xcdatamodeld`, view model dispatches, integration test against bundled fixture | 0.5 day |
-| **G1**    | GRDB: `PersistenceSchemaExtractor` (GRDB half) + fixtures + emitter coverage + `--stack` flag scaffolding   | 1 day    |
-| **G2**    | SQLite.swift: extend the same extractor (table + columns only)         | 0.5 day  |
-| **D**     | Update `missing-uml-diagrams.md` to mark §12 SwiftData as shipped and reference this plan; update CHANGELOG; update README's diagram matrix | 0.5 day |
+| Milestone | Scope | Status |
+|-----------|-------|--------|
+| **C1**    | Core Data: `CoreDataModelExtractor` + fixtures + emitter wiring + `swiftumlbridge er` accepts `.xcdatamodeld` | **Shipped** 2026-05-09 |
+| **C2**    | Studio: file-picker accepts `.xcdatamodeld`, view model dispatches, integration test against bundled fixture | **Shipped** 2026-05-09 |
+| **G1**    | GRDB: `PersistenceSchemaExtractor` (GRDB half) + fixtures + emitter coverage | **Shipped** 2026-05-09 |
+| **G2**    | SQLite.swift: extend the same extractor (table + columns only) | **Shipped** 2026-05-09 |
+| **D**     | Update `missing-uml-diagrams.md` to mark §12 fully shipped; update CHANGELOG; update README's diagram matrix | **Shipped** 2026-05-09 |
 
-C1 + C2 together fill the highest-value gap (Core Data is what most Swift projects already use). G1 + G2 are independent and can ship later if priorities shift.
+The `--stack swiftdata|coredata|grdb|auto` flag scaffolding mentioned for G1 was not added — auto-detection turned out to be sufficient since the three stacks look for mutually-exclusive signals. The flag can be added later if a real ambiguity surfaces.
 
 ## 6. Critical files
 

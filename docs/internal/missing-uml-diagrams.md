@@ -121,17 +121,17 @@ A flowchart whose nodes are mini-sequence-diagrams. Rarely drawn in practice. **
 
 ## Non-UML but widely requested
 
-### 12. Entity-Relationship (ER) diagram — **partially shipped**
+### 12. Entity-Relationship (ER) diagram — **shipped**
 
-Not strictly UML, but expected in any "diagrams" tool. For Swift this maps cleanly onto three persistence stacks:
+Not strictly UML, but expected in any "diagrams" tool. For Swift this maps cleanly onto three persistence stacks, all now covered:
 
 | Stack | Status |
 |---|---|
 | **SwiftData** `@Model` classes | **Shipped** (M7, 2026-04). `ERModelExtractor` walks `@Model`-annotated `ClassDeclSyntax` nodes; `@Relationship(inverse:)` resolves into typed `ERRelationship`s with cardinality. CLI: `swiftumlbridge er`. Studio: `DiagramMode.erDiagram` (Pro-gated). |
-| **Core Data** `.xcdatamodeld` bundles | Planned — see `er-diagram-expansion-plan.md` (milestones C1 + C2). |
-| **GRDB / SQLite.swift** schemas | Planned — same plan, milestones G1 + G2. |
+| **Core Data** `.xcdatamodeld` bundles | **Shipped** (2026-05, milestones C1 + C2 of `er-diagram-expansion-plan.md`). `CoreDataModelExtractor` parses the bundle XML via `XMLDocument`, picks the active version via `.xccurrentversion`, surfaces `parentEntity` as an "is a" edge, and dedupes inverse-pair relationships. The Studio Open dialog accepts `.xcdatamodeld`. |
+| **GRDB / SQLite.swift** schemas | **Shipped** (2026-05, milestones G1 + G2). `PersistenceSchemaExtractor` recognises GRDB record-protocol conformances and resolves `belongsTo` / `hasMany` / `hasOne` into typed cardinality, and recognises SQLite.swift's `Table("name")` + `Expression<T>("col")` namespace types into table+column entities. |
 
-Reuses the existing `ERModel` / `EREntity` / `ERAttribute` / `ERRelationship` value types and the existing PlantUML / Mermaid emitters across all three stacks.
+All three stacks reuse the same `ERModel` / `EREntity` / `ERAttribute` / `ERRelationship` value types and the existing PlantUML / Mermaid emitters — no model-layer changes were needed for the expansion.
 
 ### 13. Flowchart (Mermaid `flowchart`) — **COVERED by activity diagram**
 
@@ -153,7 +153,7 @@ If the goal is to maximize "popular diagrams a Swift dev actually wants," ranked
 
 1. ~~**Activity diagram**~~ — **SHIPPED 2026-04-20** (concurrency-aware: async let, TaskGroup).
 2. ~~**State machine diagram**~~ — **SHIPPED 2026-04-20** (CLI subcommand closes the remaining gap; framework was already in place).
-3. ~~**ER / data-model diagram (SwiftData)**~~ — **SHIPPED 2026-04** (M7). Core Data + GRDB / SQLite.swift expansion planned in `er-diagram-expansion-plan.md`. **Next up.**
+3. ~~**ER / data-model diagram**~~ — **SHIPPED 2026-04 (SwiftData) and 2026-05 (Core Data + GRDB + SQLite.swift)**. All three persistence stacks named in §12 are covered.
 4. **Component diagram** — natural extension of the existing `deps` command; adds interface semantics that architects expect.
 5. **C4 model views** — layered on top of (4); low incremental cost once component data exists.
 6. **Package diagram** — minor extension of `deps --modules`; low priority.

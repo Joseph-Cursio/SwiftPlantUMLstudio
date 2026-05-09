@@ -17,7 +17,7 @@ This repository contains two related products:
 | Sequence | ✓ | ✓ | — | ✓ |
 | Activity | ✓ | — | — | ✓ |
 | State machine | ✓ | ✓ | — | ✓ |
-| Entity-Relationship (SwiftData `@Model`) | ✓ | ✓ | — | — |
+| Entity-Relationship (SwiftData / Core Data / GRDB / SQLite.swift) | ✓ | ✓ | — | — |
 | Dependency graph (modules + types) | ✓ | ✓ | — | ✓ |
 
 ### Bridge highlights
@@ -26,7 +26,7 @@ This repository contains two related products:
 - **Sequence diagrams** — static call-graph analysis with async/sync arrow distinction, configurable depth
 - **Activity diagrams** — control-flow extraction from imperative function bodies
 - **State machine diagrams** — enum-driven state machine detection with confidence scoring
-- **ER diagrams** — SwiftData `@Model` and `@Relationship` extraction
+- **ER diagrams** — SwiftData `@Model` + `@Relationship`, Core Data `.xcdatamodeld`, GRDB record types (`belongsTo` / `hasMany` / `hasOne`), and SQLite.swift `Table` + `Expression` schemas
 - **Dependency graphs** — type-level and module-level analysis with cycle detection
 - **Macro-aware stereotypes** (`@Observable`, `@Model`, etc.) surfaced in diagrams
 - **Swift 6 strict concurrency** throughout the framework and CLI
@@ -118,10 +118,20 @@ swiftumlbridge activity --entry MyService.processOrder Sources/
 swiftumlbridge state Sources/ --format plantuml
 ```
 
-### Entity-Relationship diagram (SwiftData `@Model` types)
+### Entity-Relationship diagram (SwiftData / Core Data / GRDB / SQLite.swift)
 
 ```bash
+# SwiftData @Model types
 swiftumlbridge er Sources/Models/ --format mermaid
+
+# Core Data .xcdatamodeld bundle (XML parsed via XMLDocument; honors .xccurrentversion)
+swiftumlbridge er MyApp.xcdatamodeld --format plantuml
+
+# GRDB record types (belongsTo / hasMany / hasOne become typed relationships)
+swiftumlbridge er Sources/Database/Player.swift --format mermaid
+
+# SQLite.swift schemas (Table("name") + Expression<T>("col") namespaces)
+swiftumlbridge er Sources/Database/Schema.swift --format plantuml
 ```
 
 ### Dependency graph

@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Activity diagrams (M5)** — `swiftumlbridge activity` CLI; control-flow extraction from imperative function bodies (branches, loops, `switch`, `do/catch`); native SVG renderer
 - **State machine diagrams (M6)** — `swiftumlbridge state` CLI; enum-driven state machine detection with confidence scoring, where-clause guards, property-wrapper enum inference; PlantUML, Mermaid, and SVG emitters
 - **Entity-Relationship diagrams (M7)** — `swiftumlbridge er` CLI; SwiftData `@Model` and `@Relationship` extraction; PlantUML entity and Mermaid `erDiagram` emitters
+- **ER expansion: Core Data + GRDB + SQLite.swift (M7+)** — `swiftumlbridge er` now also accepts Core Data `.xcdatamodeld` bundles (XML parsed via `XMLDocument`, version selected via `.xccurrentversion`, parentEntity surfaced as an "is a" edge) and Swift sources containing GRDB (`FetchableRecord`/`PersistableRecord`/etc. with `belongsTo` / `hasMany` / `hasOne` typed cardinality) or SQLite.swift (`Table("name")` + `Expression<T>("col")` namespace types). Studio's Open dialog accepts `.xcdatamodeld`. Closes all four sub-milestones (C1, C2, G1, G2) of `docs/internal/er-diagram-expansion-plan.md`.
 
 ### Added — Output Formats
 
