@@ -6,6 +6,7 @@ enum CLIError: Error, CustomStringConvertible {
     case invalidEntry
     case stateCandidateNotFound(identifier: String)
     case erModelNotFound
+    case componentModelNotFound
 
     var description: String {
         switch self {
@@ -14,7 +15,9 @@ enum CLIError: Error, CustomStringConvertible {
         case .stateCandidateNotFound(let identifier):
             return "No state machine candidate '\(identifier)' was found in the sources."
         case .erModelNotFound:
-            return "No SwiftData @Model classes were found in the sources."
+            return "No persisted models (SwiftData @Model, Core Data, GRDB, SQLite.swift) were found in the sources."
+        case .componentModelNotFound:
+            return "No components were extracted from the SPM package. Make sure `swift package describe` succeeds in the package directory."
         }
     }
 }
