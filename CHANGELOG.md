@@ -61,6 +61,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Live-updating preview** with explicit save action
 - **MarkupView** annotation overlay tied to diagram entities
 - **Inspector strip** + per-mode controls (`SequenceControlsView`, `ActivityControlsView`)
+- **SPM package mode** — new "Open Package…" toolbar button (⇧⌘O) opens an SPM directory and runs `swift package describe` off the main actor; class-diagram generation switches to the module-aware `generateScript(forPackage:)` entry. Each native-canvas node gets a thin colored stripe along its bottom edge with the owning module's name (deterministic per-module color via `NativeDiagramGeometry.moduleColor`). The `ClassDiagramGenerating` protocol gained a default-implementing `generateScript(forPackage:)` so mocks degrade gracefully to the path-based flow. Per-module dashboard and module-grouped layout deferred.
 
 ### Added — Tests & Quality
 
