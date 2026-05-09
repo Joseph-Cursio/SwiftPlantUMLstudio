@@ -9,10 +9,15 @@ struct NativeSequenceDiagramView: View {
 
     // MARK: - Colors
 
+    /// Saturated participant header — stays the same in both modes.
     private static let headerFill = SwiftUI.Color(red: 0.29, green: 0.56, blue: 0.85)
-    private static let strokeColor = SwiftUI.Color(white: 0.2)
+    /// Lifelines + arrows — adapts to system label color.
+    private static let strokeColor = SwiftUI.Color(nsColor: .labelColor).opacity(0.7)
+    /// Stays white on the saturated header background.
     private static let headerTextColor = SwiftUI.Color.white
-    private static let bodyTextColor = SwiftUI.Color(white: 0.2)
+    /// Message labels and note text — adapts to system text color.
+    private static let bodyTextColor = SwiftUI.Color(nsColor: .labelColor)
+    /// Static yellow note background — readable in both modes.
     private static let noteFill = SwiftUI.Color(red: 1.0, green: 0.98, blue: 0.80)
     private static let noteStroke = SwiftUI.Color(red: 0.80, green: 0.80, blue: 0.53)
 

@@ -109,4 +109,49 @@ struct NomnomlHTMLBuilderTests {
         let expectedBase64 = Data(diagramText.utf8).base64EncodedString()
         #expect(html.contains(expectedBase64))
     }
+
+    // MARK: - Dark-mode variants
+
+    @Test("light variant uses a white page background")
+    func lightHasWhiteBg() {
+        let html = NomnomlHTMLBuilder.nomnomlHTML("[<class> Foo]", dark: false)
+        #expect(html.contains("background:white"))
+    }
+
+    @Test("dark variant uses a dark page background")
+    func darkHasDarkBg() {
+        let html = NomnomlHTMLBuilder.nomnomlHTML("[<class> Foo]", dark: true)
+        #expect(html.contains("background:#1e1e1e"))
+        #expect(html.contains("background:white") == false)
+    }
+
+    @Test("default variant matches light")
+    func defaultMatchesLight() {
+        let defaulted = NomnomlHTMLBuilder.nomnomlHTML("[<class> Foo]")
+        let explicit = NomnomlHTMLBuilder.nomnomlHTML("[<class> Foo]", dark: false)
+        #expect(defaulted == explicit)
+    }
+}
+
+@Suite("DiagramWebView.svgHTML")
+struct DiagramWebViewSVGHTMLTests {
+
+    @Test("light variant uses a white page background")
+    func lightBg() {
+        let html = DiagramWebView.svgHTML("<svg/>", dark: false)
+        #expect(html.contains("background:white"))
+    }
+
+    @Test("dark variant uses a dark page background")
+    func darkBg() {
+        let html = DiagramWebView.svgHTML("<svg/>", dark: true)
+        #expect(html.contains("background:#1e1e1e"))
+    }
+
+    @Test("inlines the supplied SVG verbatim")
+    func inlinesSVG() {
+        let svg = "<svg width=\"10\"><rect/></svg>"
+        let html = DiagramWebView.svgHTML(svg, dark: false)
+        #expect(html.contains(svg))
+    }
 }

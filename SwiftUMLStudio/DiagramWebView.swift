@@ -15,7 +15,10 @@ import SwiftUMLBridgeFramework
 struct DiagramWebView: View {
     var script: (any DiagramOutputting)?
 
+    @Environment(\.colorScheme) private var colorScheme
     @State private var localPage = WebPage()
+
+    private var dark: Bool { colorScheme == .dark }
 
     var body: some View {
         Group {
@@ -26,11 +29,11 @@ struct DiagramWebView: View {
                     WebView(url: url)
                 }
             case .mermaid:
-                localWebView(html: MermaidHTMLBuilder.mermaidHTML(script?.text ?? ""))
+                localWebView(html: MermaidHTMLBuilder.mermaidHTML(script?.text ?? "", dark: dark))
             case .nomnoml:
-                localWebView(html: NomnomlHTMLBuilder.nomnomlHTML(script?.text ?? ""))
+                localWebView(html: NomnomlHTMLBuilder.nomnomlHTML(script?.text ?? "", dark: dark))
             case .svg:
-                localWebView(html: svgHTML(script?.text ?? ""))
+                localWebView(html: svgHTML(script?.text ?? "", dark: dark))
             case nil:
                 EmptyView()
             }
@@ -38,14 +41,19 @@ struct DiagramWebView: View {
     }
 
     /// Wraps raw SVG in a minimal HTML page with pan/zoom support.
-    private func svgHTML(_ svg: String) -> String {
-        """
+    nonisolated static func svgHTML(_ svg: String, dark: Bool) -> String {
+        let bg = dark ? "#1e1e1e" : "white"
+        return """
         <html>
-        <body style="background:white; margin:0; padding:20px; overflow:auto;">
+        <body style="background:\(bg); margin:0; padding:20px; overflow:auto;">
         \(svg)
         </body>
         </html>
         """
+    }
+
+    private func svgHTML(_ svg: String, dark: Bool) -> String {
+        Self.svgHTML(svg, dark: dark)
     }
 
     private func localWebView(html: String) -> some View {

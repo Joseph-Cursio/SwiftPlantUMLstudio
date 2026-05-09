@@ -9,14 +9,22 @@ struct NativeActivityDiagramView: View {
 
     // MARK: - Colors
 
-    private static let strokeColor = SwiftUI.Color(white: 0.2)
-    private static let bodyTextColor = SwiftUI.Color(white: 0.2)
+    /// Strokes + edge arrows — adapts to system label color.
+    private static let strokeColor = SwiftUI.Color(nsColor: .labelColor).opacity(0.7)
+    /// Action labels + edge labels — adapts to system text color.
+    private static let bodyTextColor = SwiftUI.Color(nsColor: .labelColor)
+    /// Saturated pastels for action / decision shapes — stay the same in both
+    /// modes; legibility is preserved by the dark stroke around them.
     private static let actionFill = SwiftUI.Color(red: 0.89, green: 0.95, blue: 0.99)
     private static let asyncActionFill = SwiftUI.Color(red: 0.93, green: 0.91, blue: 0.96)
     private static let decisionFill = SwiftUI.Color(red: 1.0, green: 0.98, blue: 0.77)
-    private static let terminalFill = SwiftUI.Color(white: 0.2)
-    private static let forkJoinFill = SwiftUI.Color(white: 0.2)
-    private static let mergeFill = SwiftUI.Color.white
+    /// Start / end / fork / join markers — adaptive so they stay visible in
+    /// dark mode (the previous near-black fill disappeared into the dark bg).
+    private static let terminalFill = SwiftUI.Color(nsColor: .labelColor)
+    private static let forkJoinFill = SwiftUI.Color(nsColor: .labelColor)
+    /// Inner ring of the end marker — matches the canvas bg so the "ring"
+    /// effect works in both modes.
+    private static let mergeFill = SwiftUI.Color(nsColor: .textBackgroundColor)
 
     var body: some View {
         GeometryReader { geometry in

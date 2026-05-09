@@ -11,11 +11,16 @@ struct NativeDiagramView: View {
 
     // MARK: - Colors
 
-    private static let bodyFill = SwiftUI.Color(white: 0.98)
-    private static let strokeColor = SwiftUI.Color(white: 0.2)
+    /// Body fill for class boxes — adapts to light/dark mode via NSColor.
+    private static let bodyFill = SwiftUI.Color(nsColor: .controlBackgroundColor)
+    /// Border + separator strokes — adapts via NSColor.labelColor at reduced opacity.
+    private static let strokeColor = SwiftUI.Color(nsColor: .labelColor).opacity(0.7)
+    /// Accent ring around the selected node.
     private static let selectedStrokeColor = SwiftUI.Color.accentColor
+    /// Stays white in both modes — drawn on saturated colored headers.
     private static let headerTextColor = SwiftUI.Color.white
-    private static let bodyTextColor = SwiftUI.Color(white: 0.2)
+    /// Member labels (properties, methods) — adapts to system text color.
+    private static let bodyTextColor = SwiftUI.Color(nsColor: .labelColor)
 
     // MARK: - Layout Constants (forwarded to NativeDiagramGeometry)
 
@@ -224,7 +229,7 @@ struct NativeDiagramView: View {
         case .inheritance, .realization:
             var path = Path()
             path.move(to: tip); path.addLine(to: points.left); path.addLine(to: points.right); path.closeSubpath()
-            context.fill(path, with: .color(.white))
+            context.fill(path, with: .color(Self.bodyFill))
             context.stroke(path, with: .color(Self.strokeColor), lineWidth: 1)
         case .dependency:
             var path = Path()

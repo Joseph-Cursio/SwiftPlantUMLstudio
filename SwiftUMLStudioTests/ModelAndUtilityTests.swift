@@ -264,4 +264,27 @@ struct MermaidHTMLBuilderTests {
         #expect(html.contains("<script>evil()") == false)
         #expect(html.contains("&lt;/div&gt;&lt;script&gt;evil()&lt;/script&gt;"))
     }
+
+    // MARK: - Dark-mode variants
+
+    @Test("mermaidHTML(dark: false) emits the default theme and white bg")
+    func mermaidHTMLLightDefaults() {
+        let html = MermaidHTMLBuilder.mermaidHTML("graph TD", dark: false)
+        #expect(html.contains("theme: 'default'"))
+        #expect(html.contains("background:white"))
+    }
+
+    @Test("mermaidHTML(dark: true) emits the dark theme and dark bg")
+    func mermaidHTMLDarkVariant() {
+        let html = MermaidHTMLBuilder.mermaidHTML("graph TD", dark: true)
+        #expect(html.contains("theme: 'dark'"))
+        #expect(html.contains("background:#1e1e1e"))
+        #expect(html.contains("theme: 'default'") == false)
+    }
+
+    @Test("mermaidHTML defaults to the light variant when dark is omitted")
+    func mermaidHTMLDefaultIsLight() {
+        let html = MermaidHTMLBuilder.mermaidHTML("graph TD")
+        #expect(html.contains("theme: 'default'"))
+    }
 }

@@ -1,7 +1,7 @@
 import Foundation
 
 enum NomnomlHTMLBuilder {
-    nonisolated static func nomnomlHTML(_ text: String) -> String {
+    nonisolated static func nomnomlHTML(_ text: String, dark: Bool = false) -> String {
         // Base64-encode the nomnoml source to avoid any escaping issues
         let base64 = Data(text.utf8).base64EncodedString()
 
@@ -19,9 +19,12 @@ enum NomnomlHTMLBuilder {
             nomnomlTag = "<script src=\"https://cdn.jsdelivr.net/npm/nomnoml/dist/nomnoml.js\"></script>"
         }
 
+        // Nomnoml's canvas drawing uses fixed light colors. We can only adapt
+        // the surrounding page background; the diagram itself stays light.
+        let bg = dark ? "#1e1e1e" : "white"
         return """
         <html>
-        <body style="background:white; padding:20px; margin:0;">
+        <body style="background:\(bg); padding:20px; margin:0;">
         <canvas id="diagram"></canvas>
         \(graphreTag)
         \(nomnomlTag)
