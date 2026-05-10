@@ -4,7 +4,7 @@ Generate architectural diagrams from Swift source code — as a CLI, a Swift Pac
 
 This repository contains two related products:
 
-- **SwiftUMLBridge** — a Swift-native CLI (`swiftumlbridge`) and Swift Package. A modern, Swift 6 evolution of SwiftPlantUML with multi-format output (PlantUML, Mermaid.js, Nomnoml) and six diagram types.
+- **SwiftUMLBridge** — a Swift-native CLI (`swiftumlbridge`) and Swift Package. A modern, Swift 6 evolution of SwiftPlantUML with multi-format output (PlantUML, Mermaid.js, Nomnoml, native SVG) and seven diagram types.
 - **SwiftUMLStudio** — a macOS SwiftUI app embedding SwiftUMLBridge, with persistent project snapshots, native diagram rendering, architectural insights, and a Pro tier.
 
 ## Features
@@ -35,7 +35,7 @@ This repository contains two related products:
 
 ### Studio highlights
 
-- **Three modes**: Document (one-off generation), Explorer (file-tree browsing), Project (workspace with snapshots)
+- **Two app modes**: Explorer (insight-driven default — dashboard, suggestions, snapshots) and Developer (full three-pane workspace with file browser, format picker, and per-mode controls)
 - **Native rendering** for class / sequence / activity / dependency diagrams via SwiftUI Canvas, with WebView fallback for Mermaid and Nomnoml
 - **Project Dashboard** with insights and one-click suggestion cards (`InsightEngine`, `SuggestionEngine`)
 - **Architecture Change Tracking** — diff snapshots over time (Pro)
@@ -62,9 +62,9 @@ SwiftUMLStudio/
 │       │   └── Emitters/                 # PlantUML / Mermaid / Nomnoml / SVG
 │       └── swiftumlbridge/
 │           └── Commands/                 # classdiagram, sequence, activity,
-│                                         #   state, er, deps
+│                                         #   state, er, deps, component
 ├── SwiftUMLStudio/                       # macOS SwiftUI app
-│   ├── AppMode.swift                    # Document / Explorer / Project
+│   ├── AppMode.swift                    # explorer / developer
 │   ├── DiagramViewModel.swift           # @Observable state machine
 │   ├── PersistenceController.swift      # SwiftData container
 │   ├── SubscriptionManager.swift        # StoreKit 2
@@ -97,8 +97,8 @@ SwiftSyntax            call edges,            Mermaid.js
 
 ```bash
 swiftumlbridge classdiagram Sources/ --format plantuml
-swiftumlbridge classdiagram Sources/ --format mermaid --output file
-swiftumlbridge classdiagram Sources/ --format nomnoml
+swiftumlbridge classdiagram Sources/ --format mermaid --output consoleOnly > diagram.mmd
+swiftumlbridge classdiagram --package /path/to/MyPackage   # SPM module-aware
 ```
 
 ### Sequence diagram
@@ -117,7 +117,8 @@ swiftumlbridge activity --entry MyService.processOrder Sources/
 ### State machine diagram
 
 ```bash
-swiftumlbridge state Sources/ --format plantuml
+swiftumlbridge state Sources/ --list                       # list candidates with confidence
+swiftumlbridge state Sources/ --state TrafficLight.Color   # render a specific candidate
 ```
 
 ### Entity-Relationship diagram (SwiftData / Core Data / GRDB / SQLite.swift)
@@ -155,12 +156,20 @@ swiftumlbridge component --package . --include-test-targets     # opt in to test
 ### Common flags
 
 ```
---format plantuml|mermaid|nomnoml   Output format (default: plantuml)
---output browser|console|file       Destination (default: browser)
+--format plantuml|mermaid           Output format (default: plantuml)
+--output browser|browserImageOnly|consoleOnly
+                                    Destination (default: browser).
+                                    consoleOnly prints to stdout — pipe to a file.
 --config <path>                     Path to .swiftumlbridge.yml
 --depth <n>                         Call depth for sequence diagrams (default: 3)
---ci                                CI mode: no browser, write to file, exit non-zero on error
+--package <path>                    Path to a Package.swift directory
+                                    (classdiagram + component subcommands)
 ```
+
+> The `DiagramFormat` enum also has `nomnoml` and `svg` cases. Those are
+> exposed in the SwiftUML Studio app — Nomnoml renders inside the in-app
+> WebView, and `svg` produces a layout consumed by the native Canvas
+> renderer — but the CLI itself emits text only for `plantuml` and `mermaid`.
 
 ## Configuration
 
