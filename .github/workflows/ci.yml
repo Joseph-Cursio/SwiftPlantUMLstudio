@@ -81,12 +81,18 @@ jobs:
           swift --version
           xcodebuild -version
 
+      # The Xcode project signs with a development certificate from a
+      # local team ID that the runner doesn't have. Disable signing for
+      # CI builds — the binary is never distributed from here.
       - name: Build
         run: |
           xcodebuild \
             -scheme SwiftUMLStudio \
             -destination 'generic/platform=macOS' \
             -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY= \
             build
 
       - name: Test
@@ -95,7 +101,10 @@ jobs:
             -scheme SwiftUMLStudio \
             -destination 'platform=macOS,arch=arm64' \
             -skipPackagePluginValidation \
-            -resultBundlePath TestResults.xcresult
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=
 
       - name: Upload test results
         if: always()
