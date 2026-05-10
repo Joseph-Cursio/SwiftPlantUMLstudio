@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-flight runs of the same workflow on the same ref so PR pushes
+# don't pile up. Pushes to main always run to completion.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  bridge:
+    name: SwiftUMLBridge (CLI + framework)
+    # macos-latest is currently the macOS 26 runner; pin once an
+    # explicit `macos-26` label is published.
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - name: Cache SwiftPM build artifacts
+        uses: actions/cache@v4
+        with:
+          path: SwiftUMLBridge/.build
+          key: ${{ runner.os }}-spm-${{ hashFiles('SwiftUMLBridge/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Resolve dependencies
+        run: swift package --package-path SwiftUMLBridge resolve
+
+      - name: Build
+        run: swift build --package-path SwiftUMLBridge
+
+      - name: Test
+        run: swift test --package-path SwiftUMLBridge --enable-code-coverage
+
+      - name: Smoke-test the CLI
+        run: |
+          swift run --package-path SwiftUMLBridge swiftumlbridge --version
+          swift run --package-path SwiftUMLBridge swiftumlbridge --help
+
+  studio:
+    name: SwiftUMLStudio (macOS app)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: xcodebuild -version
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -scheme SwiftUMLStudio \
+            -destination 'generic/platform=macOS' \
+            -skipPackagePluginValidation \
+            build | xcbeautify --renderer github-actions || \
+          xcodebuild \
+            -scheme SwiftUMLStudio \
+            -destination 'generic/platform=macOS' \
+            -skipPackagePluginValidation \
+            build
+
+      - name: Test
+        run: |
+          xcodebuild test \
+            -scheme SwiftUMLStudio \
+            -destination 'platform=macOS,arch=arm64' \
+            -skipPackagePluginValidation \
+            -resultBundlePath TestResults.xcresult | xcbeautify --renderer github-actions || \
+          xcodebuild test \
+            -scheme SwiftUMLStudio \
+            -destination 'platform=macOS,arch=arm64' \
+            -skipPackagePluginValidation \
+            -resultBundlePath TestResults.xcresult
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-test-results
+          path: TestResults.xcresult
+          if-no-files-found: ignore
