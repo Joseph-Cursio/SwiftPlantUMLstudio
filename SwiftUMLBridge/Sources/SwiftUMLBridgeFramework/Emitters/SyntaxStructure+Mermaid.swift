@@ -60,7 +60,8 @@ extension SyntaxStructure {
         let genericsStr = generics.map { " \($0)" } ?? ""
         let membersText = mermaidMembers(context: context)
         let macroAnnotation = attributeNames.map { "\n    <<\($0)>>" }.joined()
-        var body = "    <<\(stereotype)>>\(macroAnnotation)\(genericsStr)"
+        let moduleAnnotation = module.map { "\n    <<\($0)>>" } ?? ""
+        var body = "    <<\(stereotype)>>\(macroAnnotation)\(moduleAnnotation)\(genericsStr)"
         if !membersText.isEmpty {
             body += membersText
         }

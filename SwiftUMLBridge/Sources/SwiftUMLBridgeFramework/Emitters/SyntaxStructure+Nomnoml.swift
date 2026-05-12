@@ -55,7 +55,8 @@ extension SyntaxStructure {
         let genericsStr = generics.map { " \($0)" } ?? ""
 
         let macroAnnotations = attributeNames.isEmpty ? "" : " <<\(attributeNames.joined(separator: ", "))>>"
-        let headerText = "\(typeName)\(genericsStr)\(macroAnnotations)"
+        let moduleAnnotation = module.map { " <<\($0)>>" } ?? ""
+        let headerText = "\(typeName)\(genericsStr)\(macroAnnotations)\(moduleAnnotation)"
 
         let (properties, methods) = nomnomlMembers(context: context)
 
