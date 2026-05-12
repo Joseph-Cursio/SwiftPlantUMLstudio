@@ -249,6 +249,7 @@ xcodebuild test -scheme SwiftUMLStudio -destination 'platform=macOS,arch=arm64'
 - **Tutorial** — [`docs/user/tutorial.md`](docs/user/tutorial.md)
 - **Reference** — [`docs/user/reference.md`](docs/user/reference.md)
 - **Troubleshooting** — [`docs/user/troubleshooting.md`](docs/user/troubleshooting.md)
+- **Samples** — [`docs/samples/`](docs/samples/) (one runnable mini-project per diagram type)
 - **Studio user guide** — [`docs/user/studio-user-guide.md`](docs/user/studio-user-guide.md)
 - **Migration from SwiftPlantUML** — [`docs/user/migration-from-SwiftPlantUML.md`](docs/user/migration-from-SwiftPlantUML.md)
 - **PRD** (Bridge + Studio) — [`docs/internal/SwiftUML Studio PRD.md`](docs/internal/SwiftUML%20Studio%20PRD.md)

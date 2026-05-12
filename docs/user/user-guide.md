@@ -940,3 +940,4 @@ Report issues at the project repository or file a bug in Xcode.
 - [Tutorial](tutorial.md) — step-by-step walkthrough of all diagram types (CLI and Studio app)
 - [Reference Guide](reference.md) — complete CLI options, YAML schema, framework API
 - [Troubleshooting](troubleshooting.md) — common errors and remediation steps
+- [Samples](../samples/) — runnable mini-projects, one per diagram type, with the exact CLI command to invoke
