@@ -35,7 +35,7 @@ Verify everything is ready:
 
 ```bash
 swiftumlbridge --version
-# 0.3.0
+# 1.0.0
 ```
 
 ---

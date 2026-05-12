@@ -52,7 +52,8 @@ SwiftUMLBridge is a command-line tool and Swift Package that generates architect
     - [Access Level Indicators](#access-level-indicators)
     - [Format Differences](#format-differences)
 14. [Known Limitations](#known-limitations)
-15. [Getting Help](#getting-help)
+15. [Troubleshooting](troubleshooting.md)
+16. [Getting Help](#getting-help)
 
 ---
 
@@ -938,3 +939,4 @@ Report issues at the project repository or file a bug in Xcode.
 - [SwiftUML Studio User Guide](studio-user-guide.md) — macOS GUI with Explorer Mode, project dashboard, and architecture change tracking
 - [Tutorial](tutorial.md) — step-by-step walkthrough of all diagram types (CLI and Studio app)
 - [Reference Guide](reference.md) — complete CLI options, YAML schema, framework API
+- [Troubleshooting](troubleshooting.md) — common errors and remediation steps
