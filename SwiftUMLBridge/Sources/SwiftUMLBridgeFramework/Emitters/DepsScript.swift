@@ -77,35 +77,44 @@ private extension DepsScript {
     /// --package) — emit explicit PlantUML node declarations so each node
     /// is stereotyped with its module / target kind.
     static func packageNodeDeclarations(model: DependencyGraphModel) -> [String] {
+        let stereotypes = DepsScript.nodeStereotypes(model: model)
+        guard !stereotypes.isEmpty else { return [] }
         // Modules-mode + --package: emit one `component` line per target.
         if !model.targetKinds.isEmpty {
-            return model.targetKinds.keys.sorted().map { name in
-                let kind = model.targetKinds[name]!
-                let stereotype = stereotype(forTargetKind: kind)
-                return "component \"\(name)\" as \(name) \(stereotype)"
+            return stereotypes.keys.sorted().map { name in
+                "component \"\(name)\" as \(name) <<\(stereotypes[name]!)>>"
             }
         }
-
-        // Types-mode + --package: collect per-node module from edges.
-        var nodeModule: [String: String] = [:]
-        for edge in model.edges {
-            if let module = edge.fromModule { nodeModule[edge.from] = module }
-            if let module = edge.toModule { nodeModule[edge.to] = module }
-        }
-        guard !nodeModule.isEmpty else { return [] }
-        return nodeModule.keys.sorted().map { name in
-            let module = nodeModule[name]!
-            return "class \"\(name)\" as \(name) <<\(module)>>"
+        // Types-mode + --package: emit one `class` line per known type.
+        return stereotypes.keys.sorted().map { name in
+            "class \"\(name)\" as \(name) <<\(stereotypes[name]!)>>"
         }
     }
+}
 
-    static func stereotype(forTargetKind kind: SPMTargetDescription.Kind) -> String {
-        switch kind {
-        case .executable: return "<<executable>>"
-        case .library:    return "<<library>>"
-        case .test:       return "<<test>>"
-        case .other:      return "<<other>>"
+// MARK: - Stereotype map (shared across emitters)
+
+internal extension DepsScript {
+    /// Per-node stereotype text derived from SPM provenance. Empty when
+    /// neither `targetKinds` nor per-edge module tags are present
+    /// (i.e. the path-based, non-package flow).
+    ///
+    /// - In modules-mode + --package, the stereotype is the SPM target
+    ///   kind (`library` / `executable` / `test` / `other`); external
+    ///   dependencies are absent from the map.
+    /// - In types-mode + --package, the stereotype is the owning module
+    ///   name; types whose module is unknown (typically external parent
+    ///   types) are absent from the map.
+    static func nodeStereotypes(model: DependencyGraphModel) -> [String: String] {
+        if !model.targetKinds.isEmpty {
+            return model.targetKinds.mapValues { $0.rawValue }
         }
+        var result: [String: String] = [:]
+        for edge in model.edges {
+            if let module = edge.fromModule { result[edge.from] = module }
+            if let module = edge.toModule { result[edge.to] = module }
+        }
+        return result
     }
 }
 
@@ -122,10 +131,21 @@ private extension DepsScript {
             seenNodes.insert(edge.to)
         }
 
-        // Declare nodes with quoted labels
+        let stereotypes = DepsScript.nodeStereotypes(model: model)
+
+        // Declare nodes with quoted labels. In package mode the label
+        // gets an extra line carrying the stereotype («library» / module
+        // name) — flowchart syntax doesn't accept `<<>>` directly, so we
+        // use guillemets which render cleanly as a UML stereotype.
         for node in seenNodes.sorted() {
             let safeId = mermaidId(node)
-            lines.append("    \(safeId)[\"\(node)\"]")
+            let label: String
+            if let stereotype = stereotypes[node] {
+                label = "\(node)<br/>«\(stereotype)»"
+            } else {
+                label = node
+            }
+            lines.append("    \(safeId)[\"\(label)\"]")
         }
 
         if !seenNodes.isEmpty {
@@ -183,7 +203,12 @@ private extension DepsScript {
             "#edges: rounded"
         ]
 
-        // Emit edges: [From] arrow [To]
+        let stereotypes = DepsScript.nodeStereotypes(model: model)
+
+        // Emit edges: [From] arrow [To]. Nomnoml identifies nodes by
+        // literal label, so when we have SPM provenance we inline the
+        // stereotype into both endpoints rather than declaring nodes
+        // separately.
         for edge in model.edges {
             let arrow: String
             switch edge.kind {
@@ -194,8 +219,8 @@ private extension DepsScript {
             case .imports:
                 arrow = "-->"
             }
-            let safeTo = nomnomlEscape(edge.to)
-            let safeFrom = nomnomlEscape(edge.from)
+            let safeFrom = nomnomlLabel(edge.from, stereotype: stereotypes[edge.from])
+            let safeTo = nomnomlLabel(edge.to, stereotype: stereotypes[edge.to])
             lines.append("[\(safeFrom)] \(arrow) [\(safeTo)]")
         }
 
@@ -213,6 +238,17 @@ private extension DepsScript {
         }
 
         return lines.joined(separator: "\n")
+    }
+
+    /// Produce a Nomnoml-safe node label, optionally augmented with a
+    /// `«stereotype»` suffix. Guillemets render as a stereotype in
+    /// Nomnoml output and avoid clashing with `[]` / `|` label syntax.
+    static func nomnomlLabel(_ name: String, stereotype: String?) -> String {
+        let escaped = nomnomlEscape(name)
+        if let stereotype, !stereotype.isEmpty {
+            return "\(escaped) «\(stereotype)»"
+        }
+        return escaped
     }
 
     static func nomnomlEscape(_ name: String) -> String {

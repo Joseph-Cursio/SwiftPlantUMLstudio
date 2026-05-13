@@ -19,8 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   each inheritance / conformance edge is tagged with the owning SPM
   target, rendered as `class "Foo" as Foo <<Module>>` (parallels the
   M12 `classdiagram --package` stereotype). Test targets are excluded.
-  PlantUML only for now — Mermaid / Nomnoml package-mode rendering and
-  Studio integration remain deferred.
+  Studio integration remains deferred.
 
 ### Changed — Bridge
 
@@ -29,8 +28,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   only in PlantUML output (`<<class>> <<Networking>>`); Mermaid and
   Nomnoml silently dropped the field. Both emitters now append the
   module as an additional `<<Module>>` annotation on each class node,
-  matching PlantUML. Closes the "Mermaid/Nomnoml emitter changes"
-  deferred bullet in the 0.3.0 M12 entry. Studio integration for the
+  matching PlantUML. The same parity applies to `deps --package`:
+  Mermaid flowchart node labels gain a `<br/>«stereotype»` line
+  (`App["App<br/>«executable»"]`) and Nomnoml inlines the stereotype
+  into edge endpoints (`[App «executable»] --> [Core «library»]`).
+  Closes the "Mermaid/Nomnoml emitter changes" deferred bullet across
+  both `classdiagram` and `deps`. Studio integration for the
   multi-module SPM mode remains deferred.
 
 ---
