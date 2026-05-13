@@ -5,8 +5,18 @@ public struct DependencyGraphModel: Sendable {
     /// All edges in the dependency graph.
     public let edges: [DependencyEdge]
 
-    public init(edges: [DependencyEdge]) {
+    /// SPM target kind keyed by target name. Populated by the
+    /// `forPackage:` generator path in modules mode so emitters can render
+    /// `<<library>>` / `<<executable>>` / `<<test>>` stereotypes. Empty in
+    /// the path-based flow.
+    public let targetKinds: [String: SPMTargetDescription.Kind]
+
+    public init(
+        edges: [DependencyEdge],
+        targetKinds: [String: SPMTargetDescription.Kind] = [:]
+    ) {
         self.edges = edges
+        self.targetKinds = targetKinds
     }
 
     /// DFS cycle detection. Returns names of all nodes involved in cycles.

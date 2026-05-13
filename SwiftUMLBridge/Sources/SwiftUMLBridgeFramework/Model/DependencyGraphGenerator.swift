@@ -53,6 +53,46 @@ public struct DependencyGraphGenerator: DependencyGraphGenerating, @unchecked Se
         }
     }
 
+    /// Generate a module-aware dependency graph from a parsed SPM package
+    /// description. In `.modules` mode each target's `target_dependencies`
+    /// become edges directly (authoritative — no source-level import parse),
+    /// and each node is tagged with its target kind (`<<library>>` /
+    /// `<<executable>>`) so emitters can stereotype them. In `.types` mode
+    /// each inheritance/conformance edge is tagged with the owning module of
+    /// the source type (and the parent type's module when it lives in the
+    /// same package). Test targets are excluded.
+    public func generateScript(
+        forPackage description: SPMPackageDescription,
+        packageRoot: URL,
+        mode: DepsMode,
+        with configuration: Configuration = .default,
+        sdkPath: String? = nil
+    ) -> DepsScript {
+        let edges: [DependencyEdge]
+        let kinds: [String: SPMTargetDescription.Kind]
+
+        switch mode {
+        case .modules:
+            edges = extractModuleEdges(forPackage: description)
+            kinds = Dictionary(
+                uniqueKeysWithValues: description.targets
+                    .filter { $0.kind != .test }
+                    .map { ($0.name, $0.kind) }
+            )
+        case .types:
+            edges = extractTypeEdges(
+                forPackage: description,
+                packageRoot: packageRoot,
+                configuration: configuration,
+                sdkPath: sdkPath
+            )
+            kinds = [:]
+        }
+
+        let model = DependencyGraphModel(edges: edges, targetKinds: kinds)
+        return DepsScript(model: model, configuration: configuration)
+    }
+
     // MARK: - Types mode
 
     private func extractTypeEdges(from files: [URL], configuration: Configuration) -> [DependencyEdge] {
@@ -112,6 +152,97 @@ public struct DependencyGraphGenerator: DependencyGraphGenerating, @unchecked Se
                     to: importEdge.importedModule,
                     kind: .imports
                 ))
+            }
+        }
+
+        return edges
+    }
+
+    // MARK: - Package mode
+
+    private func extractModuleEdges(
+        forPackage description: SPMPackageDescription
+    ) -> [DependencyEdge] {
+        var edges: [DependencyEdge] = []
+        let internalTargets = Set(
+            description.targets
+                .filter { $0.kind != .test }
+                .map(\.name)
+        )
+
+        for target in description.targets where target.kind != .test {
+            for dependency in target.dependencies {
+                let toModule = internalTargets.contains(dependency) ? dependency : nil
+                edges.append(DependencyEdge(
+                    from: target.name,
+                    to: dependency,
+                    kind: .imports,
+                    fromModule: target.name,
+                    toModule: toModule
+                ))
+            }
+        }
+
+        return edges
+    }
+
+    private func extractTypeEdges(
+        forPackage description: SPMPackageDescription,
+        packageRoot: URL,
+        configuration: Configuration,
+        sdkPath: String?
+    ) -> [DependencyEdge] {
+        let pathToModule = description.sourceFileToModuleMap(packageRoot: packageRoot)
+
+        // First pass: index every parsed type by name so we can resolve the
+        // owning module of a parent type for cross-module `toModule` tagging.
+        var typeOwners: [String: String] = [:]
+        var parsedItems: [(item: SyntaxStructure, module: String)] = []
+        for (path, module) in pathToModule {
+            let url = URL(fileURLWithPath: path)
+            guard let items = SyntaxStructure
+                .create(from: url, sdkPath: sdkPath, module: module)?.substructure
+            else { continue }
+            for item in items {
+                if let name = item.name {
+                    typeOwners[name] = module
+                }
+                parsedItems.append((item, module))
+            }
+        }
+
+        var edges: [DependencyEdge] = []
+        for (item, module) in parsedItems {
+            guard !shouldSkip(element: item, configuration: configuration),
+                  let name = item.name,
+                  let inheritedTypes = item.inheritedTypes,
+                  !inheritedTypes.isEmpty else { continue }
+
+            let edgeKind: DependencyEdgeKind = (item.kind == .class) ? .inherits : .conforms
+
+            for parent in inheritedTypes {
+                let parentNames: [String]
+                if let parentName = parent.name, parentName.contains("&") {
+                    parentNames = parentName
+                        .components(separatedBy: "&")
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .filter { !$0.isEmpty }
+                } else if let parentName = parent.name {
+                    parentNames = [parentName]
+                } else {
+                    continue
+                }
+
+                for parentName in parentNames {
+                    guard !shouldExclude(name: parentName, configuration: configuration) else { continue }
+                    edges.append(DependencyEdge(
+                        from: name,
+                        to: parentName,
+                        kind: edgeKind,
+                        fromModule: module,
+                        toModule: typeOwners[parentName]
+                    ))
+                }
             }
         }
 

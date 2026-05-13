@@ -18,9 +18,25 @@ public struct DependencyEdge: Sendable, Hashable {
     /// The kind of dependency relationship.
     public let kind: DependencyEdgeKind
 
-    public init(from: String, to: String, kind: DependencyEdgeKind) {
+    /// Owning SPM module of `from`, when known. Populated by the
+    /// `forPackage:` generator path; nil otherwise.
+    public let fromModule: String?
+
+    /// Owning SPM module of `to`, when known. Populated by the
+    /// `forPackage:` generator path; nil for external/system types.
+    public let toModule: String?
+
+    public init(
+        from: String,
+        to: String,
+        kind: DependencyEdgeKind,
+        fromModule: String? = nil,
+        toModule: String? = nil
+    ) {
         self.from = from
         self.to = to
         self.kind = kind
+        self.fromModule = fromModule
+        self.toModule = toModule
     }
 }

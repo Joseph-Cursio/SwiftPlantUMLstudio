@@ -48,6 +48,12 @@ private extension DepsScript {
     static func buildPlantUMLText(model: DependencyGraphModel, cycleNodes: Set<String>) -> String {
         var lines: [String] = ["@startuml"]
 
+        let nodeDeclarations = packageNodeDeclarations(model: model)
+        if !nodeDeclarations.isEmpty {
+            lines.append(contentsOf: nodeDeclarations)
+            lines.append("")
+        }
+
         // Emit one edge per line
         for edge in model.edges {
             lines.append("\(edge.from) --> \(edge.to) : \(edge.kind.rawValue)")
@@ -64,6 +70,42 @@ private extension DepsScript {
 
         lines.append("@enduml")
         return lines.joined(separator: "\n")
+    }
+
+    /// When the model carries SPM provenance — either `targetKinds`
+    /// (modules-mode + --package) or per-edge module tags (types-mode +
+    /// --package) — emit explicit PlantUML node declarations so each node
+    /// is stereotyped with its module / target kind.
+    static func packageNodeDeclarations(model: DependencyGraphModel) -> [String] {
+        // Modules-mode + --package: emit one `component` line per target.
+        if !model.targetKinds.isEmpty {
+            return model.targetKinds.keys.sorted().map { name in
+                let kind = model.targetKinds[name]!
+                let stereotype = stereotype(forTargetKind: kind)
+                return "component \"\(name)\" as \(name) \(stereotype)"
+            }
+        }
+
+        // Types-mode + --package: collect per-node module from edges.
+        var nodeModule: [String: String] = [:]
+        for edge in model.edges {
+            if let module = edge.fromModule { nodeModule[edge.from] = module }
+            if let module = edge.toModule { nodeModule[edge.to] = module }
+        }
+        guard !nodeModule.isEmpty else { return [] }
+        return nodeModule.keys.sorted().map { name in
+            let module = nodeModule[name]!
+            return "class \"\(name)\" as \(name) <<\(module)>>"
+        }
+    }
+
+    static func stereotype(forTargetKind kind: SPMTargetDescription.Kind) -> String {
+        switch kind {
+        case .executable: return "<<executable>>"
+        case .library:    return "<<library>>"
+        case .test:       return "<<test>>"
+        case .other:      return "<<other>>"
+        }
     }
 }
 

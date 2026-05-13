@@ -37,6 +37,15 @@ extension SwiftUMLBridgeCLI {
         @Option(help: "Path to custom configuration file")
         var config: String?
 
+        @Option(help: """
+            Path to a Package.swift directory. Activates module-aware mode: \
+            in --modules each SPM target_dependencies pair becomes an edge \
+            (system frameworks excluded); in --types each inheritance / \
+            conformance edge is tagged with the owning SPM target. \
+            Overrides any positional `paths` arguments.
+            """)
+        var package: String?
+
         mutating func run() async throws {
             var bridgeConfig = ConfigurationProvider().getConfiguration(for: self.config)
 
@@ -61,13 +70,29 @@ extension SwiftUMLBridgeCLI {
 
             // `--modules` takes precedence; `--types` is also valid; default to types
             let mode: DepsMode = modules ? .modules : .types
+            let generator = DependencyGraphGenerator()
 
-            let sourcePaths = paths.isEmpty ? ["."] : paths
-            let script = DependencyGraphGenerator().generateScript(
-                for: sourcePaths,
-                mode: mode,
-                with: bridgeConfig
-            )
+            let script: DepsScript
+            if let packagePath = package {
+                let packageRoot = URL(fileURLWithPath: packagePath)
+                let description = try SPMPackageReader.describe(at: packageRoot)
+                BridgeLogger.shared.info(
+                    "Loaded SPM package '\(description.name)' with \(description.targets.count) target(s)"
+                )
+                script = generator.generateScript(
+                    forPackage: description,
+                    packageRoot: packageRoot,
+                    mode: mode,
+                    with: bridgeConfig
+                )
+            } else {
+                let sourcePaths = paths.isEmpty ? ["."] : paths
+                script = generator.generateScript(
+                    for: sourcePaths,
+                    mode: mode,
+                    with: bridgeConfig
+                )
+            }
 
             switch output {
             case .browserImageOnly:

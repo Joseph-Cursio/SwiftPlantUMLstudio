@@ -242,14 +242,14 @@ swiftumlbridge sequence Sources/ Tests/ --entry AuthService.login
 Generate a PlantUML or Mermaid dependency graph from Swift source files. Supports both type-level graphs (inheritance and conformance edges) and module-level graphs (import statement edges).
 
 ```
-swiftumlbridge deps [<paths>...] [--modules] [--types] [--public-only] [--exclude <pattern>...] [--format <format>] [--output <output>] [--config <path>]
+swiftumlbridge deps [<paths>...] [--modules] [--types] [--public-only] [--exclude <pattern>...] [--format <format>] [--output <output>] [--package <path>] [--config <path>]
 ```
 
 **Positional arguments:**
 
 | Argument | Type | Description |
 |---|---|---|
-| `<paths>...` | `[String]` | Paths to `.swift` files or directories. Defaults to the current directory. |
+| `<paths>...` | `[String]` | Paths to `.swift` files or directories. Defaults to the current directory. Ignored when `--package` is provided. |
 
 **Flags:**
 
@@ -266,6 +266,7 @@ swiftumlbridge deps [<paths>...] [--modules] [--types] [--public-only] [--exclud
 | `--exclude <pattern>...` | `[String]` | `[]` | Exclude type or module names matching these glob patterns. May be specified multiple times. |
 | `--format <format>` | `DiagramFormat?` | `plantuml` | Diagram language. One of: `plantuml`, `mermaid`. |
 | `--output <format>` | `ClassDiagramOutput?` | `browser` | Output destination. One of: `browser`, `browserImageOnly`, `consoleOnly`. |
+| `--package <path>` | `String?` | `nil` | Path to a `Package.swift` directory. Activates module-aware mode: in `--modules` each SPM `target_dependencies` pair becomes an edge (authoritative — system frameworks are excluded); in `--types` each inheritance / conformance edge is tagged with the owning SPM target name, rendered as a `<<Module>>` stereotype. Overrides `<paths>`. Test targets are excluded. |
 | `--config <path>` | `String?` | `nil` | Path to a custom `.swiftumlbridge.yml` config file. |
 | `--help` | Flag | — | Print subcommand help and exit. |
 
@@ -288,6 +289,13 @@ swiftumlbridge deps Sources/ --modules --exclude Foundation --exclude Swift
 
 # Type-level graph excluding generated types
 swiftumlbridge deps Sources/ --exclude "Generated*" --format mermaid
+
+# SPM-aware module graph: edges come from target_dependencies, nodes carry
+# <<library>> / <<executable>> stereotypes. PlantUML only for now.
+swiftumlbridge deps --package . --modules --output consoleOnly
+
+# SPM-aware type graph: each type is tagged with its owning module.
+swiftumlbridge deps --package . --output consoleOnly
 ```
 
 ---
