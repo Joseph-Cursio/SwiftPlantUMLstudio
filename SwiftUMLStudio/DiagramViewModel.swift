@@ -266,11 +266,18 @@ final class DiagramViewModel {
         }
         let paths = selectedPaths
         let proUnlocked = isProUnlocked
+        let description = packageDescription
+        let root = packageRoot
         Task {
             let (summary, newInsights, newSuggestions) = await Task.detached(
                 priority: .userInitiated
             ) {
-                let result = ProjectAnalyzer.analyze(paths: paths)
+                let result: ProjectSummary
+                if let description, let root {
+                    result = ProjectAnalyzer.analyze(package: description, packageRoot: root)
+                } else {
+                    result = ProjectAnalyzer.analyze(paths: paths)
+                }
                 let insights = InsightEngine.generate(from: result)
                 let suggestions = SuggestionEngine.generate(
                     from: result, isProUnlocked: proUnlocked

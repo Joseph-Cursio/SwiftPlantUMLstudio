@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftUMLBridgeFramework
 
 struct ProjectDashboardView: View {
     let summary: ProjectSummary?
@@ -17,6 +18,9 @@ struct ProjectDashboardView: View {
                         ArchitectureDiffView(diff: diff)
                     }
                     TypeBreakdownGrid(summary: summary)
+                    if !summary.moduleBreakdown.isEmpty {
+                        ModuleBreakdownSection(modules: summary.moduleBreakdown)
+                    }
                     if !insights.isEmpty {
                         insightsSection
                     }
@@ -130,6 +134,78 @@ struct TypeBreakdownGrid: View {
     }
 }
 
+struct ModuleBreakdownSection: View {
+    let modules: [ModuleSummary]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Modules")
+                .font(.headline)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 200))], spacing: 12) {
+                ForEach(modules, id: \.name) { module in
+                    ModuleCardView(module: module)
+                }
+            }
+        }
+        .accessibilityIdentifier("dashboardModuleBreakdown")
+    }
+}
+
+struct ModuleCardView: View {
+    let module: ModuleSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(NativeDiagramGeometry.moduleColor(for: module.name))
+                    .frame(width: 10, height: 10)
+                Text(module.name)
+                    .font(.body.bold())
+                    .lineLimit(1)
+                Spacer()
+                Text(kindLabel)
+                    .font(.caption2)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.tertiary.opacity(0.4), in: Capsule())
+            }
+            HStack(spacing: 12) {
+                ModuleStat(value: module.fileCount, label: "files")
+                ModuleStat(value: module.typeCount, label: "types")
+                ModuleStat(value: module.outgoingTargetDependencies, label: "deps")
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var kindLabel: String {
+        switch module.kind {
+        case .library:    return "library"
+        case .executable: return "executable"
+        case .test:       return "test"
+        case .other:      return "other"
+        }
+    }
+}
+
+private struct ModuleStat: View {
+    let value: Int
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("\(value)")
+                .font(.caption.bold())
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
 struct InsightRowView: View {
     let insight: Insight
 
@@ -152,12 +228,12 @@ struct InsightRowView: View {
         .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 6))
     }
 
-    private var insightColor: Color {
+    private var insightColor: SwiftUI.Color {
         InsightRowView.color(for: insight.severity)
     }
 
     /// Maps an `Insight.Severity` to its dashboard row color.
-    static func color(for severity: Insight.Severity) -> Color {
+    static func color(for severity: Insight.Severity) -> SwiftUI.Color {
         switch severity {
         case .info: .blue
         case .noteworthy: .orange

@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+@testable import SwiftUMLBridgeFramework
 @testable import SwiftUMLStudio
 
 // MARK: - Test fixture helpers
@@ -138,6 +139,95 @@ struct ProjectAnalyzerTests {
         let topNames = summary.topConnectedTypes.map(\.name)
         #expect(topNames.contains("Hub"),
                 "Hub should be a top connected type since 3 types conform to it")
+    }
+
+    // MARK: - Module-aware analysis (analyze(package:))
+
+    @Test("analyze(package:) returns one ModuleSummary per non-test target")
+    func packageBreakdownTargets() throws {
+        let temp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AnalyzerPkgTests-\(UUID().uuidString)", isDirectory: true)
+        let coreDir = temp.appendingPathComponent("Sources/Core")
+        let appDir = temp.appendingPathComponent("Sources/App")
+        try FileManager.default.createDirectory(at: coreDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temp) }
+
+        try "public protocol Service {}".write(
+            to: coreDir.appendingPathComponent("Service.swift"),
+            atomically: true, encoding: .utf8
+        )
+        try "public struct HTTPClient: Service {}".write(
+            to: appDir.appendingPathComponent("HTTPClient.swift"),
+            atomically: true, encoding: .utf8
+        )
+
+        let description = SPMPackageDescription(
+            name: "Demo",
+            targets: [
+                SPMTargetDescription(
+                    name: "Core", kind: .library, path: "Sources/Core",
+                    sources: ["Service.swift"], dependencies: []
+                ),
+                SPMTargetDescription(
+                    name: "App", kind: .executable, path: "Sources/App",
+                    sources: ["HTTPClient.swift"], dependencies: ["Core"]
+                ),
+                SPMTargetDescription(
+                    name: "DemoTests", kind: .test, path: "Tests/DemoTests",
+                    sources: [], dependencies: ["App"]
+                )
+            ]
+        )
+
+        let summary = ProjectAnalyzer.analyze(package: description, packageRoot: temp)
+        let names = summary.moduleBreakdown.map(\.name)
+        #expect(names == ["App", "Core"], "Test target should be excluded")
+    }
+
+    @Test("analyze(package:) populates kind, file, type, and dependency counts")
+    func packageBreakdownCounts() throws {
+        let temp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AnalyzerPkgTests-\(UUID().uuidString)", isDirectory: true)
+        let netDir = temp.appendingPathComponent("Sources/Networking")
+        try FileManager.default.createDirectory(at: netDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temp) }
+
+        try """
+        public struct HTTPClient {}
+        public protocol Service {}
+        """.write(
+            to: netDir.appendingPathComponent("HTTPClient.swift"),
+            atomically: true, encoding: .utf8
+        )
+
+        let description = SPMPackageDescription(
+            name: "Demo",
+            targets: [
+                SPMTargetDescription(
+                    name: "Networking", kind: .library, path: "Sources/Networking",
+                    sources: ["HTTPClient.swift"],
+                    dependencies: ["Core", "Logging"]
+                )
+            ]
+        )
+
+        let summary = ProjectAnalyzer.analyze(package: description, packageRoot: temp)
+        let module = try #require(summary.moduleBreakdown.first { $0.name == "Networking" })
+        #expect(module.kind == .library)
+        #expect(module.fileCount == 1)
+        #expect(module.typeCount == 2)
+        #expect(module.outgoingTargetDependencies == 2)
+    }
+
+    @Test("analyze(paths:) leaves moduleBreakdown empty")
+    func pathBasedAnalysisHasEmptyBreakdown() throws {
+        let dir = try createTestProject(files: [
+            "Foo.swift": "struct Foo {}"
+        ])
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let summary = ProjectAnalyzer.analyze(paths: [dir])
+        #expect(summary.moduleBreakdown.isEmpty)
     }
 }
 

@@ -11,6 +11,46 @@ struct ProjectSummary: Sendable {
     let cycleWarnings: [String]
     let entryPoints: [String]
     let stateMachines: [StateMachineModel]
+    /// Per-SPM-target summary, populated only by the `analyze(package:)`
+    /// overload. Empty when the user opened a loose folder rather than a
+    /// Swift package.
+    let moduleBreakdown: [ModuleSummary]
+
+    nonisolated init(
+        totalFiles: Int,
+        totalTypes: Int,
+        typeBreakdown: [String: Int],
+        totalRelationships: Int,
+        moduleImports: [String],
+        topConnectedTypes: [(name: String, connectionCount: Int)],
+        cycleWarnings: [String],
+        entryPoints: [String],
+        stateMachines: [StateMachineModel],
+        moduleBreakdown: [ModuleSummary] = []
+    ) {
+        self.totalFiles = totalFiles
+        self.totalTypes = totalTypes
+        self.typeBreakdown = typeBreakdown
+        self.totalRelationships = totalRelationships
+        self.moduleImports = moduleImports
+        self.topConnectedTypes = topConnectedTypes
+        self.cycleWarnings = cycleWarnings
+        self.entryPoints = entryPoints
+        self.stateMachines = stateMachines
+        self.moduleBreakdown = moduleBreakdown
+    }
+}
+
+/// Per-SPM-target stats surfaced by the dashboard when a Swift Package
+/// is loaded. Mirrors what `component --package` shows graphically:
+/// each target's kind, file count, type count, and outgoing
+/// target_dependencies count.
+struct ModuleSummary: Sendable, Hashable {
+    let name: String
+    let kind: SPMTargetDescription.Kind
+    let fileCount: Int
+    let typeCount: Int
+    let outgoingTargetDependencies: Int
 }
 
 nonisolated enum ProjectAnalyzer {
@@ -51,6 +91,56 @@ nonisolated enum ProjectAnalyzer {
             cycleWarnings: cycles.sorted(),
             entryPoints: entryPoints,
             stateMachines: stateMachines
+        )
+    }
+
+    /// Module-aware analysis. Reuses `analyze(paths:)` for the cross-package
+    /// aggregate fields and enriches the result with a per-target breakdown
+    /// (test targets excluded, matching `sourceFileToModuleMap`).
+    static func analyze(
+        package description: SPMPackageDescription,
+        packageRoot: URL
+    ) -> ProjectSummary {
+        let pathToModule = description.sourceFileToModuleMap(packageRoot: packageRoot)
+        let aggregate = analyze(paths: pathToModule.keys.sorted())
+
+        var filesPerModule: [String: Int] = [:]
+        for module in pathToModule.values {
+            filesPerModule[module, default: 0] += 1
+        }
+
+        let typesGenerator = ClassDiagramGenerator()
+        var typesPerModule: [String: Int] = [:]
+        for target in description.targets where target.kind != .test {
+            let targetRoot = packageRoot.appendingPathComponent(target.path)
+            let sourcePaths = target.sources.map { targetRoot.appendingPathComponent($0).path }
+            typesPerModule[target.name] = typesGenerator.analyzeTypes(for: sourcePaths).count
+        }
+
+        let breakdown = description.targets
+            .filter { $0.kind != .test }
+            .map { target in
+                ModuleSummary(
+                    name: target.name,
+                    kind: target.kind,
+                    fileCount: filesPerModule[target.name] ?? 0,
+                    typeCount: typesPerModule[target.name] ?? 0,
+                    outgoingTargetDependencies: target.dependencies.count
+                )
+            }
+            .sorted { $0.name < $1.name }
+
+        return ProjectSummary(
+            totalFiles: aggregate.totalFiles,
+            totalTypes: aggregate.totalTypes,
+            typeBreakdown: aggregate.typeBreakdown,
+            totalRelationships: aggregate.totalRelationships,
+            moduleImports: aggregate.moduleImports,
+            topConnectedTypes: aggregate.topConnectedTypes,
+            cycleWarnings: aggregate.cycleWarnings,
+            entryPoints: aggregate.entryPoints,
+            stateMachines: aggregate.stateMachines,
+            moduleBreakdown: breakdown
         )
     }
 

@@ -14,7 +14,8 @@ private func makeSummary(
     totalRelationships: Int = 7,
     moduleImports: [String] = [],
     entryPoints: [String] = ["Foo.bar", "Baz.qux"],
-    stateMachines: [StateMachineModel] = []
+    stateMachines: [StateMachineModel] = [],
+    moduleBreakdown: [ModuleSummary] = []
 ) -> ProjectSummary {
     ProjectSummary(
         totalFiles: totalFiles,
@@ -25,7 +26,8 @@ private func makeSummary(
         topConnectedTypes: [],
         cycleWarnings: [],
         entryPoints: entryPoints,
-        stateMachines: stateMachines
+        stateMachines: stateMachines,
+        moduleBreakdown: moduleBreakdown
     )
 }
 
@@ -268,5 +270,47 @@ struct ProjectDashboardViewTests {
         let strings = try view.inspect().findAll(ViewType.Text.self)
             .compactMap { try? $0.string() }
         #expect(strings.contains("Suggested Diagrams"))
+    }
+
+    @Test("modules section hidden when moduleBreakdown is empty")
+    func modulesSectionHiddenWhenEmpty() throws {
+        let view = ProjectDashboardView(
+            summary: makeSummary(moduleBreakdown: []),
+            insights: [],
+            suggestions: [],
+            architectureDiff: nil, isProUnlocked: false,
+            onSuggestionTap: { _ in }
+        )
+        let strings = try view.inspect().findAll(ViewType.Text.self)
+            .compactMap { try? $0.string() }
+        #expect(strings.contains("Modules") == false)
+    }
+
+    @Test("modules section visible when moduleBreakdown is present")
+    func modulesSectionVisibleWhenPresent() throws {
+        let modules = [
+            ModuleSummary(
+                name: "Core", kind: .library,
+                fileCount: 3, typeCount: 5, outgoingTargetDependencies: 0
+            ),
+            ModuleSummary(
+                name: "App", kind: .executable,
+                fileCount: 1, typeCount: 1, outgoingTargetDependencies: 1
+            )
+        ]
+        let view = ProjectDashboardView(
+            summary: makeSummary(moduleBreakdown: modules),
+            insights: [],
+            suggestions: [],
+            architectureDiff: nil, isProUnlocked: false,
+            onSuggestionTap: { _ in }
+        )
+        let strings = try view.inspect().findAll(ViewType.Text.self)
+            .compactMap { try? $0.string() }
+        #expect(strings.contains("Modules"))
+        #expect(strings.contains("Core"))
+        #expect(strings.contains("App"))
+        #expect(strings.contains("library"))
+        #expect(strings.contains("executable"))
     }
 }

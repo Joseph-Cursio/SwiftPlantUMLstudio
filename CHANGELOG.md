@@ -30,8 +30,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   result is the same `<<library>>` / `<<Module>>` stereotypes the CLI
   emits, surfaced in Studio's three-pane workspace and Insights without
   any UI changes. Path-based generation remains the fallback when no
-  package is loaded. Per-module dashboard and module-grouped layout
-  remain deferred.
+  package is loaded.
+- **M11 follow-up: Per-module dashboard.** When an SPM package is
+  loaded, the Explorer-mode dashboard surfaces a new **Modules**
+  section above Insights. One card per non-test SPM target shows the
+  module's name (with the same deterministic swatch color the native
+  canvas already uses for the per-node stripe), its target kind chip
+  (`library` / `executable`), and three counts: source files, types,
+  and outgoing `target_dependencies`. Driven by a new
+  `ProjectAnalyzer.analyze(package:packageRoot:)` overload that emits a
+  `ModuleSummary` per target. Module-grouped class-diagram layout
+  remains deferred.
 
 ### Changed — Bridge
 
