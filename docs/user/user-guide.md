@@ -307,7 +307,7 @@ These flags override the `elements.showExtensions` setting in the configuration 
 
 ### Module-Aware Mode (`--package`)
 
-When you point `classdiagram` at a Swift Package via `--package`, the CLI runs `swift package describe --type json` to discover the package's targets and tags every parsed type with its owning module. PlantUML output renders the module as an additional stereotype on the type node (e.g. `<<class>> <<Networking>>`), making cross-target architecture visible at a glance.
+When you point `classdiagram` at a Swift Package via `--package`, the CLI runs `swift package describe --type json` to discover the package's targets and tags every parsed type with its owning module. PlantUML, Mermaid, and Nomnoml output render the module as an additional stereotype on the type node (e.g. `<<class>> <<Networking>>`), making cross-target architecture visible at a glance. With `--format svg`, the layout engine instead clusters each target's types together and draws a tinted, labelled grouping box around them — the same module-grouped layout the Studio app's native canvas uses.
 
 ```bash
 # Module-aware diagram of a local SPM package

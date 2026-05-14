@@ -115,6 +115,7 @@ When you open a folder in Explorer Mode, the dashboard appears immediately — b
 
 - **Stats cards** — Total files, types, relationships, and methods.
 - **Type breakdown** — Visual grid showing how many structs, classes, enums, protocols, and actors your project contains.
+- **Modules** — When the project was opened via **Open Package…**, a section of cards appears above Insights — one per non-test SPM target. Each card shows the module's name (in its deterministic per-module color), a target-kind chip (`library` or `executable`), and three counts: source files, types, and outgoing `target_dependencies`. The section is absent for folder-based projects.
 - **Insights** — Plain-language observations about your codebase (see [Insights](#insights)).
 - **Suggested diagrams** — One-click actions to generate specific diagrams (see [Suggested Diagrams](#suggested-diagrams)).
 
@@ -448,9 +449,10 @@ Class diagrams can be driven by a Swift Package directly. Click **Open Package�
 
 In package mode:
 
-- Class-diagram generation switches to the module-aware `ClassDiagramGenerator.generateScript(forPackage:)` entry point.
-- Each native-canvas node gets a thin colored stripe along its bottom edge with the owning module's name (the color is deterministic per module, so a target's color is stable across runs).
-- The dashboard summary remains project-wide; per-module breakdowns are not yet exposed.
+- Class-diagram generation switches to the module-aware `ClassDiagramGenerator.generateScript(forPackage:)` entry point — every type is tagged with its owning SPM target.
+- **Module grouping boxes.** The native class-diagram canvas draws each module as a tinted, dashed grouping box behind the types it owns, labelled with the module name. The layout engine clusters the types so a target's types are positioned together. Each module's color is deterministic — derived from its name — so a target keeps the same color across runs.
+- **Per-node module stripe (fallback).** When grouping boxes are present, the module is already conveyed by the box. The thin colored stripe along a node's bottom edge is only drawn as a fallback when no grouping boxes are available.
+- **Modules dashboard section.** The Explorer-mode dashboard gains a **Modules** section listing one card per non-test SPM target — see [Project Dashboard](#project-dashboard).
 
 To switch back to a path-based selection, use **Open…** instead of **Open Package…**.
 
