@@ -105,7 +105,10 @@ struct DiagramPreviewView: View {
                             .accessibilityIdentifier("entryPointPrompt")
                     } else if viewModel.diagramMode == .componentDiagram
                         && viewModel.packageDescription == nil {
-                        Text("Component diagrams require an open Swift Package. Use Open Package… (⇧⌘O) to load a Package.swift directory.")
+                        Text(
+                            "Component diagrams require an open Swift Package. "
+                            + "Use Open Package… (⇧⌘O) to load a Package.swift directory."
+                        )
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .padding()
@@ -177,8 +180,11 @@ struct DiagramPreviewView: View {
     @ViewBuilder
     private func cmdScrollHost<V: View>(@ViewBuilder _ content: @escaping () -> V) -> some View {
         CommandScrollWrapper(content: content) { deltaY in
-            if deltaY > 0 { viewport.zoomIn() }
-            else if deltaY < 0 { viewport.zoomOut() }
+            if deltaY > 0 {
+                viewport.zoomIn()
+            } else if deltaY < 0 {
+                viewport.zoomOut()
+            }
         }
     }
 
@@ -201,17 +207,30 @@ struct DiagramPreviewView: View {
         return nil
     }
 
+    /// Identity of whichever class-diagram node or sequence-diagram participant
+    /// is under the cursor. Drives the `NodeInfoTooltip` overlay.
+    private struct HoveredNodeInfo {
+        let label: String
+        let stereotype: String?
+        let sourceLocation: SourceLocation?
+    }
+
     /// Information about whichever class-diagram node or sequence-diagram
     /// participant is under the cursor. Drives the `NodeInfoTooltip` overlay.
-    private var hoveredInfo: (label: String, stereotype: String?, sourceLocation: SourceLocation?)? {
+    private var hoveredInfo: HoveredNodeInfo? {
         guard let id = viewport.hoveredNodeId else { return nil }
         if let graph = viewModel.currentScript?.layoutGraph,
            let node = graph.nodes.first(where: { $0.id == id }) {
-            return (node.label, node.stereotype, node.sourceLocation)
+            return HoveredNodeInfo(
+                label: node.label, stereotype: node.stereotype, sourceLocation: node.sourceLocation
+            )
         }
         if let layout = viewModel.currentScript?.sequenceLayout,
            let participant = layout.participants.first(where: { $0.id == id }) {
-            return (participant.name, "participant", participant.sourceLocation)
+            return HoveredNodeInfo(
+                label: participant.name, stereotype: "participant",
+                sourceLocation: participant.sourceLocation
+            )
         }
         return nil
     }

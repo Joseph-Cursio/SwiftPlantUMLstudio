@@ -123,7 +123,7 @@ struct PersistenceSchemaExtractorGRDBTests {
 }
 
 @Suite("PersistenceSchemaExtractor — SQLite.swift")
-struct PersistenceSchemaExtractorSQLiteSwiftTests {
+struct SchemaExtractorSQLiteSwiftTests {
 
     private func fixturePath(_ name: String) -> String {
         URL(fileURLWithPath: #filePath)

@@ -201,57 +201,71 @@ public struct DagreLayoutEngine: Sendable {
 
         // Parse node positions
         if let nodesDict = json["nodes"] as? [String: [String: Double]] {
-            for idx in result.nodes.indices {
-                let nodeId = result.nodes[idx].id
-                if let pos = nodesDict[nodeId] {
-                    result.nodes[idx].posX = pos["x"] ?? 0
-                    result.nodes[idx].posY = pos["y"] ?? 0
-                    result.nodes[idx].width = pos["width"] ?? result.nodes[idx].width
-                    result.nodes[idx].height = pos["height"] ?? result.nodes[idx].height
-                }
-            }
+            applyNodePositions(nodesDict, to: &result)
         }
 
         // Parse module cluster bounding boxes (compound layout only)
         if let clustersDict = json["clusters"] as? [String: [String: Any]] {
-            for (clusterId, box) in clustersDict.sorted(by: { $0.key < $1.key }) {
-                let module = String(clusterId.dropFirst(clusterIdPrefix.count))
-                var cluster = LayoutCluster(
-                    id: module,
-                    label: (box["label"] as? String) ?? module
-                )
-                cluster.posX = box["x"] as? Double ?? 0
-                cluster.posY = box["y"] as? Double ?? 0
-                cluster.width = box["width"] as? Double ?? 0
-                cluster.height = box["height"] as? Double ?? 0
-                result.clusters.append(cluster)
-            }
+            result.clusters = parseClusters(clustersDict)
         }
 
         // Parse edge points
         if let edgesArray = json["edges"] as? [[String: Any]] {
-            for edgeInfo in edgesArray {
-                guard let source = edgeInfo["source"] as? String,
-                      let target = edgeInfo["target"] as? String,
-                      let points = edgeInfo["points"] as? [[String: Double]] else { continue }
-
-                let layoutPoints = points.compactMap { point -> LayoutPoint? in
-                    guard let posX = point["x"], let posY = point["y"] else { return nil }
-                    return LayoutPoint(posX: posX, posY: posY)
-                }
-
-                // Find matching edge and set points
-                for idx in result.edges.indices {
-                    if result.edges[idx].sourceId == source && result.edges[idx].targetId == target
-                        && result.edges[idx].points.isEmpty {
-                        result.edges[idx].points = layoutPoints
-                        break
-                    }
-                }
-            }
+            applyEdgePoints(edgesArray, to: &result)
         }
 
         return result
+    }
+
+    /// Copies dagre's node positions/sizes onto the matching `LayoutNode`s.
+    private static func applyNodePositions(
+        _ nodesDict: [String: [String: Double]], to result: inout LayoutGraph
+    ) {
+        for idx in result.nodes.indices {
+            guard let pos = nodesDict[result.nodes[idx].id] else { continue }
+            result.nodes[idx].posX = pos["x"] ?? 0
+            result.nodes[idx].posY = pos["y"] ?? 0
+            result.nodes[idx].width = pos["width"] ?? result.nodes[idx].width
+            result.nodes[idx].height = pos["height"] ?? result.nodes[idx].height
+        }
+    }
+
+    /// Routes dagre's edge points onto the matching `LayoutEdge`s.
+    private static func applyEdgePoints(
+        _ edgesArray: [[String: Any]], to result: inout LayoutGraph
+    ) {
+        for edgeInfo in edgesArray {
+            guard let source = edgeInfo["source"] as? String,
+                  let target = edgeInfo["target"] as? String,
+                  let points = edgeInfo["points"] as? [[String: Double]] else { continue }
+
+            let layoutPoints = points.compactMap { point -> LayoutPoint? in
+                guard let posX = point["x"], let posY = point["y"] else { return nil }
+                return LayoutPoint(posX: posX, posY: posY)
+            }
+
+            for idx in result.edges.indices
+            where result.edges[idx].sourceId == source
+                && result.edges[idx].targetId == target
+                && result.edges[idx].points.isEmpty {
+                result.edges[idx].points = layoutPoints
+                break
+            }
+        }
+    }
+
+    /// Converts the `clusters` JSON dictionary from a compound-graph layout
+    /// into `LayoutCluster` values, sorted by module name for determinism.
+    private static func parseClusters(_ clustersDict: [String: [String: Any]]) -> [LayoutCluster] {
+        clustersDict.sorted { $0.key < $1.key }.map { clusterId, box in
+            let module = String(clusterId.dropFirst(clusterIdPrefix.count))
+            var cluster = LayoutCluster(id: module, label: (box["label"] as? String) ?? module)
+            cluster.posX = box["x"] as? Double ?? 0
+            cluster.posY = box["y"] as? Double ?? 0
+            cluster.width = box["width"] as? Double ?? 0
+            cluster.height = box["height"] as? Double ?? 0
+            return cluster
+        }
     }
 
     // MARK: - Fallback

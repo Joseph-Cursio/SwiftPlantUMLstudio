@@ -76,7 +76,7 @@ nonisolated enum NativeDiagramGeometry {
     // MARK: - Arrow-key navigation
 
     enum NavigationDirection: Sendable {
-        case up, down, left, right
+        case upward, down, left, right
     }
 
     /// The leftmost-topmost node in the graph. Used as the starting selection
@@ -107,20 +107,20 @@ nonisolated enum NativeDiagramGeometry {
     private static func isInDirection(
         _ direction: NavigationDirection, from origin: LayoutNode, to candidate: LayoutNode
     ) -> Bool {
-        let dx = candidate.posX - origin.posX
-        let dy = candidate.posY - origin.posY
+        let deltaX = candidate.posX - origin.posX
+        let deltaY = candidate.posY - origin.posY
         switch direction {
-        case .right: return dx > 0 && abs(dx) >= abs(dy)
-        case .left:  return dx < 0 && abs(dx) >= abs(dy)
-        case .down:  return dy > 0 && abs(dy) > abs(dx)
-        case .up:    return dy < 0 && abs(dy) > abs(dx)
+        case .right:  return deltaX > 0 && abs(deltaX) >= abs(deltaY)
+        case .left:   return deltaX < 0 && abs(deltaX) >= abs(deltaY)
+        case .down:   return deltaY > 0 && abs(deltaY) > abs(deltaX)
+        case .upward: return deltaY < 0 && abs(deltaY) > abs(deltaX)
         }
     }
 
     private static func distanceSquared(_ lhs: LayoutNode, _ rhs: LayoutNode) -> Double {
-        let dx = lhs.posX - rhs.posX
-        let dy = lhs.posY - rhs.posY
-        return dx * dx + dy * dy
+        let deltaX = lhs.posX - rhs.posX
+        let deltaY = lhs.posY - rhs.posY
+        return deltaX * deltaX + deltaY * deltaY
     }
 
     /// Header-band rectangle (top strip of the node) clamped to the node height.

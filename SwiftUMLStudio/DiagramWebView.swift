@@ -42,10 +42,10 @@ struct DiagramWebView: View {
 
     /// Wraps raw SVG in a minimal HTML page with pan/zoom support.
     nonisolated static func svgHTML(_ svg: String, dark: Bool) -> String {
-        let bg = dark ? "#1e1e1e" : "white"
+        let background = dark ? "#1e1e1e" : "white"
         return """
         <html>
-        <body style="background:\(bg); margin:0; padding:20px; overflow:auto;">
+        <body style="background:\(background); margin:0; padding:20px; overflow:auto;">
         \(svg)
         </body>
         </html>

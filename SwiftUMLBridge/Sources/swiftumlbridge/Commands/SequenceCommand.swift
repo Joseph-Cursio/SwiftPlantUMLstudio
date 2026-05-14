@@ -17,7 +17,8 @@ enum CLIError: Error, CustomStringConvertible {
         case .erModelNotFound:
             return "No persisted models (SwiftData @Model, Core Data, GRDB, SQLite.swift) were found in the sources."
         case .componentModelNotFound:
-            return "No components were extracted from the SPM package. Make sure `swift package describe` succeeds in the package directory."
+            return "No components were extracted from the SPM package. "
+                + "Make sure `swift package describe` succeeds in the package directory."
         }
     }
 }

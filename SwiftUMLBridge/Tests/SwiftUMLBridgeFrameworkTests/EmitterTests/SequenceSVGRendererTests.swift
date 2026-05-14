@@ -179,7 +179,7 @@ struct SequenceSVGRendererTests {
 }
 
 @Suite("SequenceSVGRenderer - participant sourceLocation")
-struct SequenceSVGRendererParticipantLocationTests {
+struct SequenceSVGParticipantLocationTests {
 
     private typealias FrameworkLocation = SwiftUMLBridgeFramework.SourceLocation
 

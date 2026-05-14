@@ -1,0 +1,225 @@
+import Foundation
+import SwiftData
+import SwiftUMLBridgeFramework
+
+/// Workspace-side `DiagramViewModel` behavior: history, snapshots, the file
+/// tree, SPM package loading, and project analysis. Split out of
+/// `DiagramViewModel.swift` so the core observable type stays focused on
+/// diagram state and generation dispatch.
+extension DiagramViewModel {
+
+    // MARK: - History
+
+    func loadHistory() {
+        let descriptor = FetchDescriptor<DiagramEntity>(
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        history = (try? modelContext.fetch(descriptor)) ?? []
+    }
+
+    func loadDiagram(_ entity: DiagramEntity) {
+        let modeString = entity.mode ?? ""
+        let formatString = entity.format ?? ""
+
+        diagramMode = DiagramMode(rawValue: modeString) ?? .classDiagram
+        diagramFormat = DiagramFormat(rawValue: formatString) ?? .plantuml
+
+        if diagramMode == .sequenceDiagram {
+            entryPoint = entity.entryPoint ?? ""
+            refreshEntryPoints()
+        } else if diagramMode == .dependencyGraph {
+            depsMode = DepsMode(rawValue: entity.entryPoint ?? "") ?? .types
+        } else if diagramMode == .stateMachine {
+            stateIdentifier = entity.entryPoint ?? ""
+            refreshStateMachines()
+        } else if diagramMode == .activityDiagram {
+            entryPoint = entity.entryPoint ?? ""
+            refreshEntryPoints()
+        }
+
+        sequenceDepth = entity.sequenceDepth
+
+        if let pathsData = entity.paths,
+           let paths = try? JSONDecoder().decode([String].self, from: pathsData) {
+            selectedPaths = paths
+        }
+
+        if let text = entity.scriptText {
+            restoredScript = SimpleDiagramScript(text: text, format: diagramFormat)
+        } else {
+            restoredScript = nil
+        }
+    }
+
+    func deleteHistoryItem(_ entity: DiagramEntity) {
+        if selectedHistoryItem == entity {
+            selectedHistoryItem = nil
+            restoredScript = nil
+        }
+        modelContext.delete(entity)
+        try? modelContext.save()
+        loadHistory()
+    }
+
+    // MARK: - File Tree
+
+    func rebuildFileTree() {
+        fileTree = FileNode.buildTree(from: selectedPaths)
+        if let url = selectedFileURL {
+            let allURLs = FileNode.allLeafURLs(from: fileTree)
+            if !allURLs.contains(url) {
+                selectedFileURL = nil
+                selectedFileContent = ""
+            }
+        }
+        if selectedFileURL == nil {
+            if let firstURL = FileNode.allLeafURLs(from: fileTree).first {
+                selectFile(firstURL)
+            }
+        }
+    }
+
+    func selectFile(_ url: URL?) {
+        selectedFileURL = url
+        highlightedSourceLine = nil
+        guard let url else {
+            selectedFileContent = ""
+            return
+        }
+        selectedFileContent = (try? String(contentsOf: url, encoding: .utf8))
+            ?? "// Could not read file"
+    }
+
+    /// Open the file containing the given declaration in `SourceEditorView`
+    /// and request that its line be highlighted. Used by Phase 4's
+    /// "Reveal in Source" diagram navigation.
+    func revealSource(at location: SourceLocation) {
+        guard !location.filePath.isEmpty else { return }
+        let url = URL(fileURLWithPath: location.filePath)
+        selectFile(url)
+        highlightedSourceLine = location.line
+    }
+
+    // MARK: - Snapshots
+
+    func loadSnapshots() {
+        snapshots = SnapshotManager.fetchSnapshots(modelContext: modelContext)
+    }
+
+    func saveSnapshot(isProUnlocked: Bool) {
+        guard isProUnlocked, let summary = projectSummary else { return }
+        SnapshotManager.saveSnapshot(from: summary, paths: selectedPaths, modelContext: modelContext)
+        loadSnapshots()
+        updateArchitectureDiff()
+        ReviewReminderManager.rescheduleIfEnabled()
+    }
+
+    func deleteSnapshot(_ snapshot: ProjectSnapshot) {
+        SnapshotManager.deleteSnapshot(snapshot, modelContext: modelContext)
+        loadSnapshots()
+        updateArchitectureDiff()
+    }
+
+    func updateArchitectureDiff() {
+        guard let summary = projectSummary, !selectedPaths.isEmpty else {
+            architectureDiff = nil
+            return
+        }
+        if let previous = SnapshotManager.latestSnapshot(
+            for: selectedPaths, modelContext: modelContext
+        ) {
+            architectureDiff = SnapshotManager.computeDiff(current: summary, previous: previous)
+        } else {
+            architectureDiff = nil
+        }
+    }
+
+    // MARK: - Project Analysis
+
+    func analyzeProject(isProUnlocked: Bool = true) {
+        guard !selectedPaths.isEmpty else {
+            projectSummary = nil
+            insights = []
+            suggestions = []
+            return
+        }
+        let paths = selectedPaths
+        let proUnlocked = isProUnlocked
+        let description = packageDescription
+        let root = packageRoot
+        Task {
+            let (summary, newInsights, newSuggestions) = await Task.detached(
+                priority: .userInitiated
+            ) {
+                let result: ProjectSummary
+                if let description, let root {
+                    result = ProjectAnalyzer.analyze(package: description, packageRoot: root)
+                } else {
+                    result = ProjectAnalyzer.analyze(paths: paths)
+                }
+                let insights = InsightEngine.generate(from: result)
+                let suggestions = SuggestionEngine.generate(
+                    from: result, isProUnlocked: proUnlocked
+                )
+                return (result, insights, suggestions)
+            }.value
+            projectSummary = summary
+            insights = newInsights
+            suggestions = newSuggestions
+            updateArchitectureDiff()
+        }
+    }
+
+    // MARK: - SPM Package
+
+    /// Load an SPM package from disk and switch class-diagram generation into
+    /// module-aware mode. The package root is the directory containing
+    /// `Package.swift`. Runs `swift package describe --type json` off the main
+    /// actor since the underlying Process call blocks.
+    func loadPackage(at packageRoot: URL) async {
+        packageLoadError = nil
+        let result = await Task.detached(priority: .userInitiated) {
+            try? SPMPackageReader.describe(at: packageRoot)
+        }.value
+        guard let description = result else {
+            packageLoadError = "Failed to read SPM package at \(packageRoot.lastPathComponent). "
+                + "Make sure `swift package describe` succeeds in this directory."
+            return
+        }
+        self.packageRoot = packageRoot
+        self.packageDescription = description
+        // Replace whatever loose-files selection was active with the package's
+        // own source paths so other generators (sequence, deps) keep working.
+        let sourcePaths = description.sourceFileToModuleMap(packageRoot: packageRoot).keys.sorted()
+        self.selectedPaths = sourcePaths
+    }
+
+    /// Clear the loaded package so generation falls back to loose files.
+    func unloadPackage() {
+        packageRoot = nil
+        packageDescription = nil
+        packageLoadError = nil
+    }
+
+    // MARK: - Entry Points & State Machines
+
+    func refreshEntryPoints() {
+        guard !selectedPaths.isEmpty else {
+            availableEntryPoints = []
+            return
+        }
+        availableEntryPoints = sequenceGenerator.findEntryPoints(for: selectedPaths)
+    }
+
+    func refreshStateMachines() {
+        guard !selectedPaths.isEmpty else {
+            availableStateMachines = []
+            return
+        }
+        availableStateMachines = stateGenerator.findCandidates(for: selectedPaths)
+        let identifiers = availableStateMachines.map(\.identifier)
+        if !identifiers.contains(stateIdentifier) {
+            stateIdentifier = identifiers.first ?? ""
+        }
+    }
+}

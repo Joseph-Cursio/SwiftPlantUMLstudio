@@ -179,14 +179,14 @@ struct DagreLayoutEngineTests {
     }
 
     @Test("cluster bounding box has positive size and encloses its nodes")
-    func clusterEnclosesNodes() {
+    func clusterEnclosesNodes() throws {
         let nodes = [
             LayoutNode(id: "First", label: "First", module: "Core"),
             LayoutNode(id: "Second", label: "Second", module: "Core")
         ]
         let result = DagreLayoutEngine.layout(LayoutGraph(nodes: nodes))
 
-        let cluster = try! #require(result.clusters.first { $0.id == "Core" })
+        let cluster = try #require(result.clusters.first { $0.id == "Core" })
         #expect(cluster.width > 0)
         #expect(cluster.height > 0)
 

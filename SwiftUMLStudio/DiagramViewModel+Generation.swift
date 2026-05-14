@@ -130,7 +130,8 @@ extension DiagramViewModel {
     func generateComponentDiagram() async {
         guard let description = packageDescription, let root = packageRoot else {
             componentScript = nil
-            errorMessage = "Component diagrams require an open Swift Package. Use Open Package… to load a Package.swift directory."
+            errorMessage = "Component diagrams require an open Swift Package. "
+                + "Use Open Package… to load a Package.swift directory."
             isGenerating = false
             return
         }

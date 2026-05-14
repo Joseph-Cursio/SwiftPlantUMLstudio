@@ -56,7 +56,7 @@ struct NativeSequenceDiagramView: View {
             }
             .focusable()
             .focusEffectDisabled()
-            .onKeyPress(.leftArrow)  { handleArrow(.left) }
+            .onKeyPress(.leftArrow) { handleArrow(.left) }
             .onKeyPress(.rightArrow) { handleArrow(.right) }
             .onKeyPress(.escape) {
                 viewport.selectedNodeId = nil

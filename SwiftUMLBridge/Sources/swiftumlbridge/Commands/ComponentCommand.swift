@@ -6,7 +6,11 @@ extension SwiftUMLBridgeCLI {
     struct ComponentCommand: AsyncParsableCommand {
         static let configuration = CommandConfiguration(
             commandName: "component",
-            abstract: "Generate a UML Component diagram from an SPM package — components are SPM targets, edges come from target_dependencies, provided interfaces are public Swift types per target.",
+            abstract: """
+            Generate a UML Component diagram from an SPM package — components are SPM \
+            targets, edges come from target_dependencies, provided interfaces are public \
+            Swift types per target.
+            """,
             helpNames: [.short, .long]
         )
 

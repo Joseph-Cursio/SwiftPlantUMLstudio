@@ -221,19 +221,7 @@ public struct DependencyGraphGenerator: DependencyGraphGenerating, @unchecked Se
             let edgeKind: DependencyEdgeKind = (item.kind == .class) ? .inherits : .conforms
 
             for parent in inheritedTypes {
-                let parentNames: [String]
-                if let parentName = parent.name, parentName.contains("&") {
-                    parentNames = parentName
-                        .components(separatedBy: "&")
-                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                        .filter { !$0.isEmpty }
-                } else if let parentName = parent.name {
-                    parentNames = [parentName]
-                } else {
-                    continue
-                }
-
-                for parentName in parentNames {
+                for parentName in parentNames(from: parent) {
                     guard !shouldExclude(name: parentName, configuration: configuration) else { continue }
                     edges.append(DependencyEdge(
                         from: name,
@@ -247,6 +235,17 @@ public struct DependencyGraphGenerator: DependencyGraphGenerating, @unchecked Se
         }
 
         return edges
+    }
+
+    /// Splits an inherited-type entry into individual parent names, expanding
+    /// `A & B` composition clauses. Returns an empty array for an unnamed entry.
+    private func parentNames(from parent: SyntaxStructure) -> [String] {
+        guard let parentName = parent.name else { return [] }
+        guard parentName.contains("&") else { return [parentName] }
+        return parentName
+            .components(separatedBy: "&")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 
     // MARK: - Filtering helpers

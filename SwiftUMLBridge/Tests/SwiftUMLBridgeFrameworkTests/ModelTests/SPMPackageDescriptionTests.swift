@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import SwiftUMLBridgeFramework
 
-private let sampleJSON = """
+private let sampleJSON = Data("""
 {
   "name": "DemoPackage",
   "targets": [
@@ -29,7 +29,7 @@ private let sampleJSON = """
     }
   ]
 }
-""".data(using: .utf8)!
+""".utf8)
 
 @Suite("SPMPackageReader.parse")
 struct SPMPackageReaderParseTests {
@@ -60,7 +60,7 @@ struct SPMPackageReaderParseTests {
 
     @Test("malformed JSON throws ReadError.malformedJSON")
     func malformedThrows() {
-        let bad = "not json".data(using: .utf8)!
+        let bad = Data("not json".utf8)
         #expect(throws: SPMPackageReader.ReadError.self) {
             try SPMPackageReader.parse(bad)
         }
@@ -68,12 +68,12 @@ struct SPMPackageReaderParseTests {
 
     @Test("unknown target type maps to .other")
     func unknownTypeMapsToOther() throws {
-        let weird = """
+        let weird = Data("""
         { "name": "X", "targets": [
           { "name": "Plug", "type": "plugin", "path": "Plugins/Plug",
             "sources": ["main.swift"], "target_dependencies": [] }
         ]}
-        """.data(using: .utf8)!
+        """.utf8)
         let pkg = try SPMPackageReader.parse(weird)
         #expect(pkg.targets.first?.kind == .other)
     }

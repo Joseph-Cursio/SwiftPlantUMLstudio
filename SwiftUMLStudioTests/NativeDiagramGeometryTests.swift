@@ -44,8 +44,8 @@ struct NativeDiagramGeometryModuleColorTests {
     @Test("different modules generally get different colors")
     func variesAcrossModules() {
         let networking = NativeDiagramGeometry.moduleColor(for: "Networking")
-        let ui = NativeDiagramGeometry.moduleColor(for: "UI")
-        #expect(networking != ui)
+        let uiColor = NativeDiagramGeometry.moduleColor(for: "UI")
+        #expect(networking != uiColor)
     }
 }
 
@@ -285,7 +285,7 @@ struct NativeDiagramGeometryNextNodeTests {
     @Test("up from E selects B")
     func upFromCenter() throws {
         let next = try #require(
-            NativeDiagramGeometry.nextNode(in: gridGraph(), from: "E", direction: .up)
+            NativeDiagramGeometry.nextNode(in: gridGraph(), from: "E", direction: .upward)
         )
         #expect(next.id == "B")
     }
@@ -305,7 +305,7 @@ struct NativeDiagramGeometryNextNodeTests {
 
     @Test("up from A (top-left node) returns nil")
     func upFromTopLeft() {
-        #expect(NativeDiagramGeometry.nextNode(in: gridGraph(), from: "A", direction: .up) == nil)
+        #expect(NativeDiagramGeometry.nextNode(in: gridGraph(), from: "A", direction: .upward) == nil)
     }
 
     @Test("nextNode for a missing currentId returns nil")

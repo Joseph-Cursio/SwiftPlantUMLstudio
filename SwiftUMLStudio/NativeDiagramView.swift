@@ -66,9 +66,9 @@ struct NativeDiagramView: View {
             }
             .focusable()
             .focusEffectDisabled()
-            .onKeyPress(.upArrow)    { handleArrow(.up) }
-            .onKeyPress(.downArrow)  { handleArrow(.down) }
-            .onKeyPress(.leftArrow)  { handleArrow(.left) }
+            .onKeyPress(.upArrow) { handleArrow(.upward) }
+            .onKeyPress(.downArrow) { handleArrow(.down) }
+            .onKeyPress(.leftArrow) { handleArrow(.left) }
             .onKeyPress(.rightArrow) { handleArrow(.right) }
             .onKeyPress(.escape) {
                 viewport.selectedNodeId = nil
@@ -123,6 +123,11 @@ struct NativeDiagramView: View {
         }
         return .ignored
     }
+}
+
+// MARK: - Drawing
+
+extension NativeDiagramView {
 
     // MARK: - Cluster Drawing
 

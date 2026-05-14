@@ -133,7 +133,7 @@ struct NoteGeometryTests {
 }
 
 @Suite("NativeSequenceGeometry.hitParticipant")
-struct NativeSequenceGeometryHitParticipantTests {
+struct SequenceGeometryHitParticipantTests {
 
     private func makeParticipant(
         name: String, centerX: Double, topY: Double = 20,
@@ -199,7 +199,7 @@ struct NativeSequenceGeometryHitParticipantTests {
 }
 
 @Suite("NativeSequenceGeometry.nextParticipant (arrow navigation)")
-struct NativeSequenceGeometryNextParticipantTests {
+struct SequenceGeometryNextParticipantTests {
 
     private func makeParticipant(name: String, centerX: Double) -> SequenceParticipant {
         SequenceParticipant(name: name, centerX: centerX)
@@ -256,7 +256,7 @@ struct NativeSequenceGeometryNextParticipantTests {
             makeParticipant(name: "A", centerX: 100),
             makeParticipant(name: "B", centerX: 250)
         ])
-        #expect(NativeSequenceGeometry.nextParticipant(in: layout, from: "A", direction: .up) == nil)
+        #expect(NativeSequenceGeometry.nextParticipant(in: layout, from: "A", direction: .upward) == nil)
         #expect(NativeSequenceGeometry.nextParticipant(in: layout, from: "A", direction: .down) == nil)
     }
 
@@ -264,8 +264,8 @@ struct NativeSequenceGeometryNextParticipantTests {
     func firstParticipantPicksLeftmost() throws {
         let layout = makeLayout(participants: [
             makeParticipant(name: "right", centerX: 400),
-            makeParticipant(name: "left",  centerX: 100),
-            makeParticipant(name: "mid",   centerX: 250)
+            makeParticipant(name: "left", centerX: 100),
+            makeParticipant(name: "mid", centerX: 250)
         ])
         let first = try #require(NativeSequenceGeometry.firstParticipant(in: layout))
         #expect(first.name == "left")

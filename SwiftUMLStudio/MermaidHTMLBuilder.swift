@@ -24,10 +24,10 @@ enum MermaidHTMLBuilder {
             scriptTag = "<script src=\"https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js\"></script>"
         }
         let theme = dark ? "dark" : "default"
-        let bg = dark ? "#1e1e1e" : "white"
+        let background = dark ? "#1e1e1e" : "white"
         return """
         <html>
-        <body style="background:\(bg); padding:20px;">
+        <body style="background:\(background); padding:20px;">
         \(scriptTag)
         <script>mermaid.initialize({ startOnLoad: true, theme: '\(theme)' });</script>
         <div class="mermaid">\(escaped)</div>

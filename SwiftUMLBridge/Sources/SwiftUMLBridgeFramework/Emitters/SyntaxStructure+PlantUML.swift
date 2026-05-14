@@ -80,7 +80,9 @@ extension SyntaxStructure {
         let macroAnnotation = attributeNames.map { " <<\($0)>>" }.joined()
         let moduleAnnotation = module.map { " <<\($0)>>" } ?? ""
         let typeName = displayName ?? name ?? "unknown"
-        return "class \"\(typeName)\" as \(alias)\(genericsStr) \(stereotype)\(macroAnnotation)\(moduleAnnotation) { \(body) \n}"
+        let header = "class \"\(typeName)\" as \(alias)\(genericsStr) "
+            + "\(stereotype)\(macroAnnotation)\(moduleAnnotation)"
+        return "\(header) { \(body) \n}"
     }
 
     func addLinking(context: DiagramContext) {

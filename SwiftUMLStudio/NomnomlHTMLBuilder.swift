@@ -21,10 +21,10 @@ enum NomnomlHTMLBuilder {
 
         // Nomnoml's canvas drawing uses fixed light colors. We can only adapt
         // the surrounding page background; the diagram itself stays light.
-        let bg = dark ? "#1e1e1e" : "white"
+        let background = dark ? "#1e1e1e" : "white"
         return """
         <html>
-        <body style="background:\(bg); padding:20px; margin:0;">
+        <body style="background:\(background); padding:20px; margin:0;">
         <canvas id="diagram"></canvas>
         \(graphreTag)
         \(nomnomlTag)
