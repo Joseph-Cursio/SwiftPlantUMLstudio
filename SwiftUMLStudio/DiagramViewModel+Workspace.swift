@@ -178,6 +178,15 @@ extension DiagramViewModel {
     /// actor since the underlying Process call blocks.
     func loadPackage(at packageRoot: URL) async {
         packageLoadError = nil
+        #if APP_STORE_BUILD
+        // SPMPackageReader.describe shells out to `swift package describe`,
+        // which the macOS App Sandbox blocks. Surface a clear error instead
+        // of attempting (and trapping) the Process() call.
+        packageLoadError = "Opening a Swift Package isn't supported in the "
+            + "App Store build of SwiftUMLStudio. Use the direct-download "
+            + "version for SPM support."
+        return
+        #else
         let result = await Task.detached(priority: .userInitiated) {
             try? SPMPackageReader.describe(at: packageRoot)
         }.value
@@ -192,6 +201,7 @@ extension DiagramViewModel {
         // own source paths so other generators (sequence, deps) keep working.
         let sourcePaths = description.sourceFileToModuleMap(packageRoot: packageRoot).keys.sorted()
         self.selectedPaths = sourcePaths
+        #endif
     }
 
     /// Clear the loaded package so generation falls back to loose files.

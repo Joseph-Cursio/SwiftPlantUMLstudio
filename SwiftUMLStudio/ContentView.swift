@@ -141,10 +141,12 @@ struct ContentView: View {
                 Button("Open…", systemImage: "folder", action: openPanel)
                     .help("Open Swift files or directories (⌘O)")
                     .accessibilityIdentifier("toolbarOpenButton")
+                #if !APP_STORE_BUILD
                 Button("Open Package…", systemImage: "shippingbox", action: openPackagePanel)
                     .help("Open an SPM package directory (⇧⌘O)")
                     .keyboardShortcut("o", modifiers: [.command, .shift])
                     .accessibilityIdentifier("toolbarOpenPackageButton")
+                #endif
 
                 Text(viewModel.pathSummary)
                     .foregroundStyle(.secondary)
@@ -198,6 +200,7 @@ struct ContentView: View {
         viewModel.generate()
     }
 
+    #if !APP_STORE_BUILD
     private func openPackagePanel() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
@@ -214,6 +217,7 @@ struct ContentView: View {
             }
         }
     }
+    #endif
 }
 
 extension Notification.Name {

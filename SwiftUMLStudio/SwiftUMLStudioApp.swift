@@ -7,6 +7,7 @@
 
 import AppKit
 import SwiftUI
+import SwiftUMLBridgeFramework
 
 // Prevents the macOS reopen Apple Event (kAEReopenApplication) from triggering
 // window creation while the XCTest runner owns the process. Without this gate,
@@ -33,6 +34,15 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 struct SwiftUMLStudioApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var subscriptionManager = SubscriptionManager()
+
+    init() {
+        #if APP_STORE_BUILD
+        // Sandboxed App Store build: don't dlopen sourcekitdInProc from the
+        // system Xcode toolchain (forbidden by the sandbox). Parsing falls
+        // back to SwiftSyntax-only with no inferred-type supplement.
+        BridgeConfiguration.skipSourceKitTypenameSupplement = true
+        #endif
+    }
 
     var body: some Scene {
         WindowGroup {

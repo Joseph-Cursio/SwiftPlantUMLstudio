@@ -105,10 +105,17 @@ struct DiagramPreviewView: View {
                             .accessibilityIdentifier("entryPointPrompt")
                     } else if viewModel.diagramMode == .componentDiagram
                         && viewModel.packageDescription == nil {
-                        Text(
+                        #if APP_STORE_BUILD
+                        let componentPackagePromptText =
+                            "Component diagrams require an open Swift Package. "
+                            + "Package loading isn't available in the App Store build — "
+                            + "use the direct-download version for SPM support."
+                        #else
+                        let componentPackagePromptText =
                             "Component diagrams require an open Swift Package. "
                             + "Use Open Package… (⇧⌘O) to load a Package.swift directory."
-                        )
+                        #endif
+                        Text(componentPackagePromptText)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .padding()

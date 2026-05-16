@@ -65,6 +65,9 @@ internal extension SyntaxStructure {
     /// `"TypeName.varName" → resolvedTypeName` for variables whose type cannot
     /// be read from the syntax tree alone (inferred types).
     private static func buildTypenameMap(from source: String, sdkPath: String?) -> [String: String] {
+        if BridgeConfiguration.skipSourceKitTypenameSupplement {
+            return [:]
+        }
         let file = File(contents: source)
         let structure: Structure
         do {
