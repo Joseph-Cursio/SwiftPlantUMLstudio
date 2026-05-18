@@ -75,8 +75,14 @@ extension DiagramViewModel {
             if let bookmark, let result = SecurityScopedURL.resolveURL(from: bookmark) {
                 resolvedURLs.append(result.url)
                 resolvedPaths.append(result.url.path())
-                // Drop stale bookmarks so the next save regenerates them.
-                resolvedBookmarks.append(result.isStale ? nil : bookmark)
+                // Stale bookmarks regenerate via `bookmarkToPersist`. Storing
+                // `nil` would silently strip sandbox access on the next launch
+                // (path-only fallback isn't readable under sandbox).
+                resolvedBookmarks.append(SecurityScopedURL.bookmarkToPersist(
+                    original: bookmark,
+                    resolvedURL: result.url,
+                    isStale: result.isStale
+                ))
             } else if let fallbackPath {
                 resolvedPaths.append(fallbackPath)
                 resolvedBookmarks.append(nil)

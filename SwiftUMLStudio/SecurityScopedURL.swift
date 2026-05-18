@@ -35,4 +35,15 @@ enum SecurityScopedURL {
         }
         return (url, isStale)
     }
+
+    /// Given the bookmark that was just resolved and the URL it produced, pick
+    /// the bookmark to persist back to disk. Stale bookmarks regenerate from
+    /// the live URL; fresh ones are returned unchanged. Falls back to the
+    /// original bookmark if regeneration fails (e.g., the URL is no longer
+    /// reachable at this instant), which is safer than persisting `nil` and
+    /// losing all sandbox access on the next launch.
+    nonisolated static func bookmarkToPersist(original: Data, resolvedURL: URL, isStale: Bool) -> Data {
+        guard isStale else { return original }
+        return makeBookmark(for: resolvedURL) ?? original
+    }
 }
