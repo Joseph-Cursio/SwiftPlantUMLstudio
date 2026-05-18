@@ -117,12 +117,14 @@ extension DiagramViewModel {
     }
 
     #if APP_STORE_BUILD
-    /// Surface a user-facing warning when restoring a snapshot dropped one or
-    /// more paths the sandboxed app can't read. Routed through `errorMessage`
-    /// so the eventual UI surface picks it up alongside generation errors.
+    /// Surface a user-facing notice when restoring a snapshot dropped one or
+    /// more paths the sandboxed app can't read. Routed through `restoreNotice`
+    /// (not `errorMessage`) so `generate()` — which is triggered by the
+    /// subsequent `selectedPaths` change and clears `errorMessage` — leaves
+    /// the notice intact for the UI to display.
     private func setRestoreWarning(droppedCount: Int) {
         let suffix = droppedCount == 1 ? "file" : "files"
-        errorMessage = "\(droppedCount) saved \(suffix) couldn't be restored "
+        restoreNotice = "\(droppedCount) saved \(suffix) couldn't be restored "
             + "(moved, deleted, or never re-granted access). Re-open via the "
             + "file picker to include them again."
     }

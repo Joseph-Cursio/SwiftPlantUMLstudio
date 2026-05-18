@@ -31,6 +31,13 @@ final class DiagramViewModel {
 
     var isGenerating: Bool = false
     var errorMessage: String?
+    /// Non-fatal notice set by `restoreSelection(from:)` when one or more saved
+    /// files couldn't be restored (sandbox can't read them without a bookmark,
+    /// or the bookmark was unresolvable). Distinct from `errorMessage` because
+    /// `generate()` clears `errorMessage` at the start of every run, and
+    /// restoring a snapshot triggers a generate via `onChange(selectedPaths)`
+    /// — the notice would be wiped before the UI could display it.
+    var restoreNotice: String?
     var diagramFormat: DiagramFormat = .plantuml
     var diagramMode: DiagramMode = .classDiagram
     var entryPoint: String = ""

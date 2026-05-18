@@ -104,6 +104,14 @@ struct DiagramViewModelTests {
         }
     }
 
+    @Test("default restoreNotice is nil")
+    func defaultRestoreNotice() {
+        runOnMain {
+            let viewModel = DiagramViewModel(persistenceController: PersistenceController(inMemory: true))
+            #expect(viewModel.restoreNotice == nil)
+        }
+    }
+
     // MARK: currentScript
 
     @Test("currentScript is nil initially for classDiagram mode")

@@ -93,6 +93,41 @@ struct ContentView: View {
         .sheet(isPresented: $showPaywall) {
             PaywallView(subscriptionManager: subscriptionManager)
         }
+        .alert(
+            "Couldn't generate diagram",
+            isPresented: alertBinding(\.errorMessage)
+        ) {
+            Button("OK", role: .cancel) { viewModel.errorMessage = nil }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
+        }
+        .alert(
+            "Couldn't open Swift Package",
+            isPresented: alertBinding(\.packageLoadError)
+        ) {
+            Button("OK", role: .cancel) { viewModel.packageLoadError = nil }
+        } message: {
+            Text(viewModel.packageLoadError ?? "")
+        }
+        .alert(
+            "Snapshot partially restored",
+            isPresented: alertBinding(\.restoreNotice)
+        ) {
+            Button("OK", role: .cancel) { viewModel.restoreNotice = nil }
+        } message: {
+            Text(viewModel.restoreNotice ?? "")
+        }
+    }
+
+    /// Builds an `isPresented` binding driven by whether the referenced
+    /// `String?` is non-nil. The setter clears the field on dismiss.
+    private func alertBinding(
+        _ keyPath: ReferenceWritableKeyPath<DiagramViewModel, String?>
+    ) -> Binding<Bool> {
+        Binding(
+            get: { viewModel[keyPath: keyPath] != nil },
+            set: { if !$0 { viewModel[keyPath: keyPath] = nil } }
+        )
     }
 
     // MARK: - Explorer Layout

@@ -153,6 +153,26 @@ struct DiagramViewModelMockStateTests {
         #expect(viewModel.errorMessage == nil)
     }
 
+    @Test("generate preserves restoreNotice (separate lifecycle from errorMessage)")
+    @MainActor
+    func generatePreservesRestoreNotice() {
+        // The restore-warning notice set by restoreSelection must survive the
+        // subsequent generate() that fires from onChange(of: selectedPaths).
+        // Otherwise the UI alert would never have a chance to display it.
+        let mockClass = MockClassGenerator()
+        let viewModel = DiagramViewModel(
+            persistenceController: PersistenceController(inMemory: true),
+            classGenerator: mockClass
+        )
+        viewModel.restoreNotice = "2 saved files couldn't be restored"
+        viewModel.selectedPaths = ["/tmp/Foo.swift"]
+        viewModel.diagramMode = .classDiagram
+
+        viewModel.generate()
+
+        #expect(viewModel.restoreNotice == "2 saved files couldn't be restored")
+    }
+
     @Test("generate clears restoredScript so history item is no longer displayed")
     @MainActor
     func generateClearsRestoredScript() async throws {
