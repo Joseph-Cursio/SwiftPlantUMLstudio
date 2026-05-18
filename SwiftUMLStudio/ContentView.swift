@@ -6,6 +6,9 @@ struct ContentView: View {
     @Environment(SubscriptionManager.self) private var subscriptionManager
     @State private var viewModel = DiagramViewModel()
     @State private var showPaywall = false
+    /// Holds the format the user just selected that requires consent (always
+    /// `.plantuml` today) plus the previous format to revert to on cancel.
+    @State private var plantUMLConsentRequest: (previous: DiagramFormat, requested: DiagramFormat)?
     @AppStorage("appMode") private var appMode: AppMode = .explorer
 
     var body: some View {
@@ -85,7 +88,16 @@ struct ContentView: View {
                 viewModel.refreshStateMachines()
             }
         }
-        .onChange(of: viewModel.diagramFormat) { viewModel.generate() }
+        .onChange(of: viewModel.diagramFormat) { oldValue, newValue in
+            // PlantUML rendering goes through planttext.com (third-party HTTPS
+            // upload of the diagram source). Gate the first selection behind
+            // explicit consent; subsequent selections proceed normally.
+            if newValue == .plantuml && !PlantUMLConsent.hasConsented {
+                plantUMLConsentRequest = (previous: oldValue, requested: newValue)
+                return
+            }
+            viewModel.generate()
+        }
         .onChange(of: viewModel.entryPoint) { viewModel.generate() }
         .onChange(of: viewModel.sequenceDepth) { viewModel.generate() }
         .onChange(of: viewModel.depsMode) { viewModel.generate() }
@@ -93,42 +105,13 @@ struct ContentView: View {
         .sheet(isPresented: $showPaywall) {
             PaywallView(subscriptionManager: subscriptionManager)
         }
-        .alert(
-            "Couldn't generate diagram",
-            isPresented: alertBinding(\.errorMessage)
-        ) {
-            Button("OK", role: .cancel) { viewModel.errorMessage = nil }
-        } message: {
-            Text(viewModel.errorMessage ?? "")
-        }
-        .alert(
-            "Couldn't open Swift Package",
-            isPresented: alertBinding(\.packageLoadError)
-        ) {
-            Button("OK", role: .cancel) { viewModel.packageLoadError = nil }
-        } message: {
-            Text(viewModel.packageLoadError ?? "")
-        }
-        .alert(
-            "Snapshot partially restored",
-            isPresented: alertBinding(\.restoreNotice)
-        ) {
-            Button("OK", role: .cancel) { viewModel.restoreNotice = nil }
-        } message: {
-            Text(viewModel.restoreNotice ?? "")
-        }
+        .modifier(NoticeAlerts(viewModel: viewModel))
+        .modifier(PlantUMLConsentAlert(
+            viewModel: viewModel,
+            request: $plantUMLConsentRequest
+        ))
     }
 
-    /// Builds an `isPresented` binding driven by whether the referenced
-    /// `String?` is non-nil. The setter clears the field on dismiss.
-    private func alertBinding(
-        _ keyPath: ReferenceWritableKeyPath<DiagramViewModel, String?>
-    ) -> Binding<Bool> {
-        Binding(
-            get: { viewModel[keyPath: keyPath] != nil },
-            set: { if !$0 { viewModel[keyPath: keyPath] = nil } }
-        )
-    }
 
     // MARK: - Explorer Layout
 
@@ -258,6 +241,88 @@ struct ContentView: View {
         }
     }
     #endif
+}
+
+/// View-modifier wrapper for the three string-backed notice alerts (generation
+/// errors, package-load errors, snapshot restore notices). Extracted from
+/// `ContentView.body` so the modifier chain stays inside the SwiftUI
+/// type-checker's budget.
+private struct NoticeAlerts: ViewModifier {
+    @Bindable var viewModel: DiagramViewModel
+
+    func body(content: Content) -> some View {
+        content
+            .alert(
+                "Couldn't generate diagram",
+                isPresented: binding(\.errorMessage)
+            ) {
+                Button("OK", role: .cancel) { viewModel.errorMessage = nil }
+            } message: {
+                Text(viewModel.errorMessage ?? "")
+            }
+            .alert(
+                "Couldn't open Swift Package",
+                isPresented: binding(\.packageLoadError)
+            ) {
+                Button("OK", role: .cancel) { viewModel.packageLoadError = nil }
+            } message: {
+                Text(viewModel.packageLoadError ?? "")
+            }
+            .alert(
+                "Snapshot partially restored",
+                isPresented: binding(\.restoreNotice)
+            ) {
+                Button("OK", role: .cancel) { viewModel.restoreNotice = nil }
+            } message: {
+                Text(viewModel.restoreNotice ?? "")
+            }
+    }
+
+    private func binding(
+        _ keyPath: ReferenceWritableKeyPath<DiagramViewModel, String?>
+    ) -> Binding<Bool> {
+        Binding(
+            get: { viewModel[keyPath: keyPath] != nil },
+            set: { if !$0 { viewModel[keyPath: keyPath] = nil } }
+        )
+    }
+}
+
+/// Consent prompt shown the first time the user selects `.plantuml`. Continue
+/// grants persistent consent and proceeds with generation; Cancel reverts the
+/// format to whatever was active before the selection.
+private struct PlantUMLConsentAlert: ViewModifier {
+    let viewModel: DiagramViewModel
+    @Binding var request: (previous: DiagramFormat, requested: DiagramFormat)?
+
+    func body(content: Content) -> some View {
+        content.alert(
+            "Use PlantUML rendering?",
+            isPresented: Binding(
+                get: { request != nil },
+                set: { if !$0 { request = nil } }
+            )
+        ) {
+            Button("Continue") {
+                PlantUMLConsent.grant()
+                viewModel.generate()
+                request = nil
+            }
+            Button("Cancel", role: .cancel) {
+                if let pending = request {
+                    viewModel.diagramFormat = pending.previous
+                }
+                request = nil
+            }
+        } message: {
+            Text(
+                "PlantUML diagrams are rendered by planttext.com, a third-party "
+                + "service. Your diagram source will be sent over HTTPS to that "
+                + "service. Mermaid and Nomnoml render locally without any "
+                + "network use."
+            )
+        }
+    }
 }
 
 extension Notification.Name {

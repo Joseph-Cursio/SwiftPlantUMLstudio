@@ -7,13 +7,13 @@ struct DiagramInspectorStrip: View {
     var body: some View {
         HStack(spacing: 12) {
             Picker("Format", selection: $viewModel.diagramFormat) {
-                Text("PlantUML").tag(DiagramFormat.plantuml)
+                Text("PlantUML (planttext.com)").tag(DiagramFormat.plantuml)
                 Text("Mermaid").tag(DiagramFormat.mermaid)
                 Text("Nomnoml").tag(DiagramFormat.nomnoml)
                 Text("SVG").tag(DiagramFormat.svg)
             }
             .pickerStyle(.menu)
-            .frame(width: 160)
+            .frame(width: 220)
             .accessibilityIdentifier("formatPicker")
 
             Divider().frame(height: 20)
